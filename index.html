@@ -89,7 +89,8 @@
         .google-dots span:nth-child(3){ background: var(--g-yellow); }
         .google-dots span:nth-child(4){ background: var(--g-green); }
 
-        .header-info { flex: 1; }
+        .header-info { flex: 1; cursor: pointer; }
+        .header-info:hover p { color: var(--g-blue); text-decoration: underline; }
         .header-info h1 {
             font-family: 'Google Sans', sans-serif;
             font-size: 18px;
@@ -101,6 +102,7 @@
             font-size: 13px;
             color: var(--muted);
             margin-top: 2px;
+            transition: color .2s, text-decoration .2s;
         }
 
         .month-pill {
@@ -414,9 +416,9 @@
         <div class="google-dots">
             <span></span><span></span><span></span><span></span>
         </div>
-        <div class="header-info">
+        <div class="header-info" onclick="editarNombre()">
             <h1>Mi Servicio</h1>
-            <p>Dylan Ricardo Martínez</p>
+            <p id="nombrePersona">Toca aquí para ingresar tu nombre</p>
         </div>
         <div class="month-pill" id="monthLabel"></div>
     </header>
@@ -474,10 +476,13 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────
-const NOMBRE      = "Dylan Ricardo Martínez";
 const META_HORAS  = 30;
 const META_MINS   = META_HORAS * 60;
 const KEY_WA      = 'wa_number';
+const KEY_NOMBRE  = 'nombre_persona';
+
+// Nombre guardado o vacío
+let NOMBRE = localStorage.getItem(KEY_NOMBRE) || '';
 
 // Número guardado o vacío (se pedirá al enviar)
 let WA_NUMBER = localStorage.getItem(KEY_WA) || '';
@@ -500,6 +505,22 @@ const prevYear   = month === 0 ? year - 1 : year;
 document.getElementById('monthLabel').textContent = `${mesNombre} ${year}`;
 document.getElementById('prevMonthName').textContent = meses[prevMes];
 
+// ─── ACTUALIZAR NOMBRE EN HEADER ────────────────────────────────────────
+function actualizarHeaderNombre() {
+    const nombreEl = document.getElementById('nombrePersona');
+    nombreEl.textContent = NOMBRE || 'Toca aquí para ingresar tu nombre';
+}
+
+// ─── EDITAR NOMBRE ──────────────────────────────────────────────────────
+function editarNombre() {
+    const nuevoNombre = prompt('¿Cuál es tu nombre?', NOMBRE);
+    if (nuevoNombre !== null && nuevoNombre.trim() !== '') {
+        NOMBRE = nuevoNombre.trim();
+        localStorage.setItem(KEY_NOMBRE, NOMBRE);
+        actualizarHeaderNombre();
+    }
+}
+
 // ─── STORAGE KEYS ──────────────────────────────────────────────────────────
 const KEY_CUR  = `servicio_${year}_${month}`;
 const KEY_PREV = `servicio_${prevYear}_${prevMes}`;
@@ -518,6 +539,7 @@ if (prevTieneData && !localStorage.getItem(KEY_BANNER_SEEN)) {
 function revisarMesAnterior() {
     localStorage.setItem(KEY_BANNER_SEEN, '1');
     document.getElementById('newMonthBanner').classList.remove('visible');
+    if (!NOMBRE) { if (!editarNombre()) return; }
     if (!WA_NUMBER) { if (!pedirNumero()) return; }
     let totalPrev = calcularTotalMinutos(prevData, new Date(prevYear, prevMes + 1, 0).getDate());
     let horasPrev = minutosAHora(totalPrev);
@@ -717,6 +739,7 @@ function celebrarDia(dia) {
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────
+actualizarHeaderNombre();
 actualizarUI();
 
 // ─── WHATSAPP ──────────────────────────────────────────────────────────
@@ -734,6 +757,12 @@ function pedirNumero(motivo) {
 }
 
 function enviarWhatsApp() {
+    // Verificar si hay nombre
+    if (!NOMBRE) {
+        editarNombre();
+        if (!NOMBRE) return;
+    }
+
     // Calcular total real desde los datos, no desde el DOM
     let totalMins = 0;
     for (let d = 1; d <= diasMes; d++) totalMins += parsearMinutos(datos[`dia_${d}`] || '');
