@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Servicio – Dylan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --g-blue:   #4285F4;
+            --g-red:    #EA4335;
+            --g-yellow: #FBBC05;
+            --g-green:  #34A853;
+            --bg:       #F8F9FA;
+            --surface:  #FFFFFF;
+            --surface2: #F1F3F4;
+            --border:   #E0E0E0;
+            --text:     #202124;
+            --muted:    #5F6368;
+            --today-bg: #E8F0FE;
+            --today-bd: #4285F4;
+            --radius:   12px;
+            --shadow:   0 2px 8px rgba(60,64,67,.12), 0 1px 3px rgba(60,64,67,.08);
+            --shadow-lg:0 8px 30px rgba(60,64,67,.18);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px 16px 40px;
+        }
+
+        /* ── EMOJI BURST ── */
+        .emoji-burst {
+            position: fixed;
+            font-size: 22px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: emojiBurst .75s cubic-bezier(.2,.8,.4,1) forwards;
+            will-change: transform, opacity;
+        }
+        @keyframes emojiBurst {
+            0%   { transform: translate(0,0) scale(0.4); opacity: 1; }
+            60%  { opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.1); opacity: 0; }
+        }
+
+        /* ── APP SHELL ── */
+        .app {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .google-dots {
+            display: flex;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .google-dots span {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+        .google-dots span:nth-child(1){ background: var(--g-blue); }
+        .google-dots span:nth-child(2){ background: var(--g-red); }
+        .google-dots span:nth-child(3){ background: var(--g-yellow); }
+        .google-dots span:nth-child(4){ background: var(--g-green); }
+
+        .header-info { flex: 1; }
+        .header-info h1 {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--g-blue);
+            letter-spacing: -.3px;
+        }
+        .header-info p {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .month-pill {
+            background: var(--g-blue);
+            color: #fff;
+            font-family: 'Google Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ── NEW MONTH BANNER ── */
+        .new-month-banner {
+            background: #FEF7E0;
+            border: 1.5px solid var(--g-yellow);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .new-month-banner.visible { display: flex; }
+        .banner-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .banner-icon { font-size: 24px; flex-shrink: 0; }
+        .banner-body h3 {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 14px;
+            color: #7B5800;
+            font-weight: 700;
+        }
+        .banner-body p {
+            font-size: 12px;
+            color: #9B6F00;
+            margin-top: 3px;
+            line-height: 1.5;
+        }
+        .banner-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-banner {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Google Sans', sans-serif;
+            border: none;
+            cursor: pointer;
+            transition: opacity .2s, transform .1s;
+        }
+        .btn-banner:active { transform: scale(.97); }
+        .btn-review {
+            background: var(--g-blue);
+            color: #fff;
+        }
+        .btn-clear {
+            background: var(--g-red);
+            color: #fff;
+        }
+
+        /* ── DAYS LIST ── */
+        .days-wrapper {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .days-scroll {
+            max-height: 52vh;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        .days-scroll::-webkit-scrollbar { width: 6px; }
+        .days-scroll::-webkit-scrollbar-track { background: transparent; }
+        .days-scroll::-webkit-scrollbar-thumb { background: #DADCE0; border-radius: 3px; }
+
+        .day-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+            transition: background .15s;
+        }
+        .day-row:last-child { border-bottom: none; }
+        .day-row.today {
+            background: var(--today-bg);
+        }
+        .day-row.weekend .day-label { color: var(--muted); }
+
+        .day-num {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--muted);
+        }
+        .today .day-num {
+            background: var(--g-blue);
+            color: #fff;
+        }
+
+        .day-label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .today-tag {
+            font-size: 10px;
+            background: var(--g-blue);
+            color: #fff;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            font-family: 'Google Sans', sans-serif;
+        }
+
+        input[type="text"] {
+            width: 76px;
+            padding: 7px 10px;
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            color: var(--text);
+            text-align: center;
+            outline: none;
+            transition: border-color .2s, background .2s;
+            flex-shrink: 0;
+        }
+        input[type="text"]:focus {
+            border-color: var(--g-blue);
+            background: #fff;
+        }
+        .today input[type="text"] {
+            border-color: var(--today-bd);
+        }
+
+        /* celebration flash on a row */
+        @keyframes rowFlash {
+            0%   { background: #fff9c4; }
+            100% { background: transparent; }
+        }
+        .celebrate-row { animation: rowFlash .8s ease; }
+        .today.celebrate-row { animation: rowFlash .8s ease; }
+
+        /* ── WINK FACE (reemplaza input de 2:30) ── */
+        .wink-face {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 76px;
+            height: 38px;
+            font-size: 24px;
+            border-radius: 8px;
+            background: #FEF7E0;
+            border: 1.5px solid var(--g-yellow);
+            flex-shrink: 0;
+            animation: winkAnim 1.8s ease forwards;
+        }
+        @keyframes winkAnim {
+            0%   { transform: scale(0.5); opacity: 0; }
+            15%  { transform: scale(1.2); opacity: 1; }
+            30%  { transform: scale(1);   opacity: 1; }
+            /* guiño: achica un poco simulando parpadeo */
+            50%  { transform: scaleY(0.85) scale(1); }
+            60%  { transform: scale(1); }
+            80%  { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ── 💯 SWAP (reemplaza número total) ── */
+        .total-goal-text {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 46px;
+            font-weight: 700;
+            display: inline-block;
+            line-height: 1;
+            animation: goalTextIn .5s cubic-bezier(.2,.8,.4,1) forwards;
+        }
+        @keyframes goalTextIn {
+            0%   { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+            60%  { transform: scale(1.15) rotate(3deg);  opacity: 1; }
+            100% { transform: scale(1) rotate(0deg);      opacity: 1; }
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .total-block {
+            text-align: center;
+        }
+        .total-label {
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .total-value {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 46px;
+            font-weight: 700;
+            color: var(--g-green);
+            transition: color .4s ease;
+            display: inline-block;
+            line-height: 1;
+        }
+        .total-unit {
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* pop animation when reaching goal */
+        @keyframes popAndGrow {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.25); }
+            60%  { transform: scale(1.18); }
+            80%  { transform: scale(1.22); }
+            100% { transform: scale(1.15); }
+        }
+        .goal-reached {
+            animation: popAndGrow .5s cubic-bezier(.36,.07,.19,.97) forwards;
+        }
+
+        /* progress bar */
+        .progress-bar-wrap {
+            background: var(--surface2);
+            border-radius: 20px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 20px;
+            width: 0%;
+            transition: width .4s ease, background .4s ease;
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* ── BUTTONS ── */
+        .btn-wa {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #25D366;
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Google Sans', sans-serif;
+            cursor: pointer;
+            transition: background .2s, transform .1s;
+            width: 100%;
+        }
+        .btn-wa:hover { background: #1db954; }
+        .btn-wa:active { transform: scale(.98); }
+
+        .hint {
+            font-size: 11.5px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="google-dots">
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="header-info">
+            <h1>Mi Servicio</h1>
+            <p>Dylan Ricardo Martínez</p>
+        </div>
+        <div class="month-pill" id="monthLabel"></div>
+    </header>
+
+    <!-- NUEVO MES BANNER -->
+    <div class="new-month-banner" id="newMonthBanner">
+        <div class="banner-top">
+            <div class="banner-icon">📅</div>
+            <div class="banner-body">
+                <h3>¡Nuevo mes, nuevas horas!</h3>
+                <p>Antes de empezar, ¿quieres revisar o enviar el informe del mes anterior (<strong id="prevMonthName"></strong>) o borrar los datos para comenzar de nuevo?</p>
+            </div>
+        </div>
+        <div class="banner-actions">
+            <button class="btn-banner btn-review" onclick="revisarMesAnterior()">📋 Revisar primero</button>
+            <button class="btn-banner btn-clear" onclick="confirmarBorrado()">🗑️ Borrar y empezar</button>
+        </div>
+    </div>
+
+    <!-- DAYS -->
+    <div class="days-wrapper">
+        <div class="days-scroll" id="daysList"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="total-block">
+            <div class="total-label">Total del mes</div>
+            <div class="total-value" id="totalDisplay">0:00</div>
+            <div class="total-unit">horas</div>
+        </div>
+
+        <div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-info">
+                <span>0 hr</span>
+                <span id="progressPct">0%</span>
+                <span>Meta: 30 hr</span>
+            </div>
+        </div>
+
+        <button class="btn-wa" onclick="enviarWhatsApp()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c-.003 1.396.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.004-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+            </svg>
+            Enviar Informe por WhatsApp
+        </button>
+
+        <p class="hint">Escribe "2", "1.5" o "2:30" — se guarda automáticamente ✓</p>
+    </footer>
+
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const NOMBRE      = "Dylan Ricardo Martínez";
+const META_HORAS  = 30;
+const META_MINS   = META_HORAS * 60;
+const KEY_WA      = 'wa_number';
+
+// Número guardado o vacío (se pedirá al enviar)
+let WA_NUMBER = localStorage.getItem(KEY_WA) || '';
+
+// ─── FECHAS ───────────────────────────────────────────────────────────────────
+const hoy       = new Date();
+const year      = hoy.getFullYear();
+const month     = hoy.getMonth();        // 0-based
+const diaHoy    = hoy.getDate();
+const diasMes   = new Date(year, month + 1, 0).getDate();
+
+const meses      = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const diasSemana = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DIAS_FULL  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+const mesNombre  = meses[month];
+const prevMes    = month === 0 ? 11 : month - 1;
+const prevYear   = month === 0 ? year - 1 : year;
+
+document.getElementById('monthLabel').textContent = `${mesNombre} ${year}`;
+document.getElementById('prevMonthName').textContent = meses[prevMes];
+
+// ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
+const KEY_CUR  = `servicio_${year}_${month}`;
+const KEY_PREV = `servicio_${prevYear}_${prevMes}`;
+const KEY_BANNER_SEEN = `banner_seen_${year}_${month}`;
+
+let datos = JSON.parse(localStorage.getItem(KEY_CUR)) || {};
+
+// ─── NUEVO MES BANNER ─────────────────────────────────────────────────────────
+const prevData = JSON.parse(localStorage.getItem(KEY_PREV)) || {};
+const prevTieneData = Object.values(prevData).some(v => v && v.trim() !== '');
+
+if (prevTieneData && !localStorage.getItem(KEY_BANNER_SEEN)) {
+    document.getElementById('newMonthBanner').classList.add('visible');
+}
+
+function revisarMesAnterior() {
+    localStorage.setItem(KEY_BANNER_SEEN, '1');
+    document.getElementById('newMonthBanner').classList.remove('visible');
+    if (!WA_NUMBER) { if (!pedirNumero()) return; }
+    let totalPrev = calcularTotalMinutos(prevData, new Date(prevYear, prevMes + 1, 0).getDate());
+    let horasPrev = minutosAHora(totalPrev);
+    let msg = `*INFORME DE PREDICACIÓN*\n\n*Nombre*: ${NOMBRE}\n*Mes*: ${meses[prevMes]} ${prevYear}\n*Horas*: ${horasPrev}\n\n_Feliz de servir a Jehová_ 🙏`;
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function confirmarBorrado() {
+    if (confirm(`¿Seguro que quieres borrar los datos de ${meses[prevMes]}? Esta acción no se puede deshacer.`)) {
+        localStorage.removeItem(KEY_PREV);
+        localStorage.setItem(KEY_BANNER_SEEN, '1');
+        document.getElementById('newMonthBanner').classList.remove('visible');
+    }
+}
+
+// ─── RENDER DÍAS ──────────────────────────────────────────────────────────────
+const container = document.getElementById('daysList');
+
+for (let d = 1; d <= diasMes; d++) {
+    const fecha   = new Date(year, month, d);
+    const dow     = fecha.getDay();
+    const esHoy   = (d === diaHoy);
+    const esWE    = (dow === 0 || dow === 6);
+
+    const row = document.createElement('div');
+    row.className = 'day-row' + (esHoy ? ' today' : '') + (esWE ? ' weekend' : '');
+    if (esHoy) row.id = 'fila_hoy';
+
+    const val = datos[`dia_${d}`] || '';
+
+    row.innerHTML = `
+        <div class="day-num">${d}</div>
+        <div class="day-label">
+            ${DIAS_FULL[dow]}${esHoy ? ' <span class="today-tag">Hoy</span>' : ''}
+        </div>
+        <input type="text" id="dia_${d}" value="${val}" placeholder="0:00"
+               oninput="alCambiar(${d}, this.value)" onblur="alSalir(${d}, this.value)" autocomplete="off">
+    `;
+    container.appendChild(row);
+}
+
+// Auto-scroll a hoy
+setTimeout(() => {
+    const el = document.getElementById('fila_hoy');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}, 250);
+
+// ─── PARSER ───────────────────────────────────────────────────────────────────
+function parsearMinutos(val) {
+    val = val.trim();
+    if (!val) return 0;
+    if (val.includes(':')) {
+        const [h, m] = val.split(':').map(x => parseInt(x) || 0);
+        return h * 60 + m;
+    }
+    val = val.replace(',', '.');
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : Math.round(n * 60);
+}
+
+function minutosAHora(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}:${m < 10 ? '0' : ''}${m}`;
+}
+
+function calcularTotalMinutos(obj, totalDias) {
+    let t = 0;
+    for (let d = 1; d <= totalDias; d++) t += parsearMinutos(obj[`dia_${d}`] || '');
+    return t;
+}
+
+// ─── COLOR DE PROGRESO (verde → rojo → amarillo) ──────────────────────────────
+function lerpColor(c1, c2, t) {
+    // c1, c2: [r, g, b] arrays; t: 0–1
+    return c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+}
+
+const C_GREEN  = [52, 168, 83];   // #34A853
+const C_RED    = [234, 67, 53];   // #EA4335
+const C_YELLOW = [251, 188, 5];   // #FBBC05
+
+function obtenerColorProgreso(minutos) {
+    if (minutos <= 0) return `rgb(${C_GREEN.join(',')})`;
+    const mitad = META_MINS / 2;
+    if (minutos <= mitad) {
+        const t = minutos / mitad;
+        const c = lerpColor(C_GREEN, C_RED, t);
+        return `rgb(${c.join(',')})`;
+    } else {
+        const t = Math.min((minutos - mitad) / mitad, 1);
+        const c = lerpColor(C_RED, C_YELLOW, t);
+        return `rgb(${c.join(',')})`;
+    }
+}
+
+// ─── ACTUALIZAR UI ────────────────────────────────────────────────────────────
+let metaYaAlcanzada = false;
+let goalSwapTimer   = null;
+
+function actualizarUI() {
+    let totalMins = 0;
+    for (let d = 1; d <= diasMes; d++) totalMins += parsearMinutos(datos[`dia_${d}`] || '');
+
+    const totalEl = document.getElementById('totalDisplay');
+
+    // Si el 💯 ya está mostrándose y bajamos de meta, restaurar
+    if (totalMins < META_MINS && metaYaAlcanzada) {
+        metaYaAlcanzada = false;
+        clearTimeout(goalSwapTimer);
+        totalEl.classList.remove('goal-reached', 'total-goal-text');
+        totalEl.innerHTML = minutosAHora(totalMins);
+        totalEl.style.color = obtenerColorProgreso(totalMins);
+    } else if (totalMins < META_MINS) {
+        totalEl.innerHTML = minutosAHora(totalMins);
+        totalEl.style.color = obtenerColorProgreso(totalMins);
+    }
+
+    // Barra de progreso
+    const pct = Math.min(totalMins / META_MINS * 100, 100);
+    const fill = document.getElementById('progressFill');
+    fill.style.width = pct + '%';
+    fill.style.background = obtenerColorProgreso(totalMins);
+    document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+
+    // Animación de meta
+    if (totalMins >= META_MINS && !metaYaAlcanzada) {
+        metaYaAlcanzada = true;
+
+        // 1) Pop del número
+        totalEl.innerHTML = minutosAHora(totalMins);
+        totalEl.style.color = obtenerColorProgreso(totalMins);
+        totalEl.classList.remove('goal-reached');
+        void totalEl.offsetWidth;
+        totalEl.classList.add('goal-reached');
+
+        // 2) Burst de emojis
+        lanzarBurst(totalEl, ['🎊','🎉','⭐','🌟','✨','🏆'], 10);
+
+        // 3) Después de 2.2s → swap a 💯%
+        clearTimeout(goalSwapTimer);
+        goalSwapTimer = setTimeout(() => {
+            totalEl.classList.remove('goal-reached');
+            totalEl.classList.add('total-goal-text');
+            totalEl.style.color = obtenerColorProgreso(META_MINS);
+            totalEl.innerHTML = '🏆💯🎉<br><span style="font-size:13px;font-weight:500;color:#5F6368;letter-spacing:-.2px">"Bien hecho, esclavo bueno y fiel"<br><em style="font-size:11px">Mateo 25:23</em></span>';
+        }, 2200);
+    }
+}
+
+// ─── AL CAMBIAR UN INPUT ──────────────────────────────────────────────────────
+function alCambiar(dia, valor) {
+    datos[`dia_${dia}`] = valor;
+    localStorage.setItem(KEY_CUR, JSON.stringify(datos));
+    actualizarUI();
+}
+
+function alSalir(dia, valor) {
+    const mins = parsearMinutos(valor);
+    if (mins >= 120 && !winkTimers[dia]) {
+        celebrarDia(dia);
+    }
+}
+
+// Timer para restaurar el input después del wink
+const winkTimers = {};
+
+function celebrarDia(dia) {
+    const input = document.getElementById(`dia_${dia}`);
+    if (!input) return;
+
+    // Burst de emojis desde el input
+    lanzarBurst(input, ['⭐','🚀','🔥','✨','💫'], 8);
+
+    // Crear cara wink en lugar del input
+    if (winkTimers[dia]) return; // ya está animando
+
+    const savedVal = input.value;
+    const wink = document.createElement('span');
+    wink.className = 'wink-face';
+    wink.textContent = '😉';
+    input.replaceWith(wink);
+
+    winkTimers[dia] = setTimeout(() => {
+        // Restaurar el input con el valor guardado
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.id   = `dia_${dia}`;
+        inp.value = savedVal;
+        inp.placeholder = '0:00';
+        inp.autocomplete = 'off';
+        inp.setAttribute('oninput', `alCambiar(${dia}, this.value)`);
+        inp.setAttribute('onblur', `alSalir(${dia}, this.value)`);
+        wink.replaceWith(inp);
+        delete winkTimers[dia];
+    }, 2200);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+actualizarUI();
+
+// ─── WHATSAPP ─────────────────────────────────────────────────────────────────
+function pedirNumero(motivo) {
+    const num = prompt(
+        motivo || '📱 ¿A qué número de WhatsApp vas a enviar el informe?\n(Incluye código de país, ej: 573001234567)',
+        WA_NUMBER
+    );
+    if (num === null) return false; // canceló
+    const limpio = num.replace(/\D/g, '');
+    if (!limpio) { alert('Número no válido, inténtalo de nuevo.'); return false; }
+    WA_NUMBER = limpio;
+    localStorage.setItem(KEY_WA, limpio);
+    return true;
+}
+
+function enviarWhatsApp() {
+    // Calcular total real desde los datos, no desde el DOM
+    let totalMins = 0;
+    for (let d = 1; d <= diasMes; d++) totalMins += parsearMinutos(datos[`dia_${d}`] || '');
+
+    if (totalMins === 0) {
+        alert('No tienes horas registradas para enviar este mes.');
+        return;
+    }
+
+    // Si no hay número guardado, pedirlo
+    if (!WA_NUMBER) {
+        if (!pedirNumero()) return;
+    }
+
+    const totalTexto = minutosAHora(totalMins);
+    const msg = `*INFORME DE PREDICACIÓN*\n\n*Nombre*: ${NOMBRE}\n*Mes*: ${mesNombre} ${year}\n*Horas*: ${totalTexto}\n\n_Feliz de servir a Jehová_ 🙏`;
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Clic largo en el botón WA → editar número
+document.querySelector('.btn-wa').addEventListener('contextmenu', e => {
+    e.preventDefault();
+    pedirNumero(`✏️ Número actual: ${WA_NUMBER || 'ninguno'}\n¿Quieres cambiarlo?`);
+});
+let waLongPress;
+document.querySelector('.btn-wa').addEventListener('touchstart', () => {
+    waLongPress = setTimeout(() => {
+        pedirNumero(`✏️ Número actual: ${WA_NUMBER || 'ninguno'}\n¿Quieres cambiarlo?`);
+    }, 600);
+});
+document.querySelector('.btn-wa').addEventListener('touchend', () => clearTimeout(waLongPress));
+document.querySelector('.btn-wa').addEventListener('touchmove', () => clearTimeout(waLongPress));
+
+// ─── EMOJI BURST (CSS-only, sin canvas) ──────────────────────────────────────
+function lanzarBurst(originEl, emojis, count) {
+    const rect = originEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+
+    for (let i = 0; i < count; i++) {
+        const el = document.createElement('span');
+        el.className = 'emoji-burst';
+        el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+        // Dirección aleatoria en ángulo
+        const angle = (Math.random() * 360) * Math.PI / 180;
+        const dist  = 50 + Math.random() * 70;
+        el.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+        el.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+        el.style.left = `${cx}px`;
+        el.style.top  = `${cy}px`;
+        el.style.animationDelay = `${i * 28}ms`;
+
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+    }
+}
+</script>
+
+</body>
+</html>
