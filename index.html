@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <script>
+        if (!localStorage.getItem('nombre_persona')) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('start')) {
+                window.location.href = 'landing.html';
+            }
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JW Timesheet</title>
+    <meta name="description" content="Registra tus horas de predicación, cursos bíblicos y revistas como precursor. Envía tu informe mensual por WhatsApp.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="logo.jpeg">
+
+    <style>
+        :root {
+            --jw-blue: #239C43;
+            --jw-blue-dark: #16622A;
+            --jw-blue-light: #2EB854;
+            --bg: #F4F6F4;
+            --surface: #FFFFFF;
+            --surface2: #F4FBF5;
+            --border: #D1D5DB;
+            --text: #1F2937;
+            --muted: #4B5563;
+            --today-bg: #EAF6EC;
+            --today-bd: #239C43;
+            --radius: 4px;
+            --radius-lg: 6px;
+            --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
+            --nav-h: 64px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans','Inter',sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            padding-bottom: var(--nav-h);
+        }
+
+        /* ── EMOJI BURST ── */
+        .emoji-burst {
+            position: fixed; font-size: 22px; pointer-events: none;
+            z-index: 9999; animation: emojiBurst .75s cubic-bezier(.2,.8,.4,1) forwards;
+            will-change: transform,opacity;
+        }
+        @keyframes emojiBurst {
+            0%   { transform: translate(0,0) scale(.4); opacity:1; }
+            60%  { opacity:1; }
+            100% { transform: translate(var(--tx),var(--ty)) scale(1.1); opacity:0; }
+        }
+
+        /* ── APP SHELL ── */
+        .app {
+            width:100%; max-width:480px;
+            display:flex; flex-direction:column; gap:0;
+            padding-top: 0;
+        }
+
+        /* ── HEADER FIJO ── */
+        .header {
+            background: var(--surface);
+            border-bottom: 2px solid var(--jw-blue);
+            box-shadow: var(--shadow);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-info { flex:1; cursor:pointer; }
+        .header-info:hover p { color: var(--jw-blue); text-decoration: underline; }
+        .header-info h1 {
+            font-family: 'Inter',sans-serif; font-size: 18px; font-weight: 700;
+            color: var(--jw-blue-dark); letter-spacing: -.3px;
+        }
+        .header-info p { font-size:12px; color:var(--muted); margin-top:1px; transition: color .2s; }
+        .month-pill {
+            background: var(--jw-blue-light); color:#fff;
+            font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+            padding:4px 10px; border-radius:var(--radius); white-space:nowrap; flex-shrink:0;
+        }
+
+        /* ── SECTION VIEWS ── */
+        .section-view { display:none; flex-direction:column; gap:14px; padding:14px 16px; }
+        .section-view.active { display:flex; }
+
+        /* ── BOTTOM NAV ── */
+        .bottom-nav {
+            position: fixed; bottom:0; left:0; right:0;
+            height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+            display: flex; align-items:center; justify-content:space-around;
+            z-index: 200;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        /* Full-width centering trick */
+        @media (min-width: 480px) {
+            .bottom-nav {
+                left: 50%; transform: translateX(-50%);
+                right: auto; width: 480px;
+            }
+        }
+        .nav-item {
+            display: flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:3px; flex:1; height:100%; cursor:pointer;
+            color: var(--muted); transition: color .2s;
+            -webkit-tap-highlight-color: transparent;
+            border:none; background:none; padding:0;
+            font-family:'Inter',sans-serif;
+        }
+        .nav-item:hover { color: var(--jw-blue-light); }
+        .nav-item.active { color: var(--jw-blue); }
+        .nav-item svg { width:22px; height:22px; stroke-width:1.7; }
+        .nav-label { font-size:10px; font-weight:500; letter-spacing:.2px; }
+
+        /* ── NEW MONTH BANNER ── */
+        .new-month-banner {
+            background:#EDF4FC; border:1px solid var(--border);
+            border-left:4px solid var(--jw-blue); border-radius:var(--radius-lg);
+            padding:14px 16px; display:none; flex-direction:column; gap:10px;
+        }
+        .new-month-banner.visible { display:flex; }
+        .banner-top { display:flex; align-items:flex-start; gap:12px; }
+        .banner-icon { font-size:22px; flex-shrink:0; }
+        .banner-body h3 { font-family:'Inter',sans-serif; font-size:14px; color:var(--jw-blue-dark); font-weight:700; }
+        .banner-body p  { font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.5; }
+        .banner-actions { display:flex; gap:8px; }
+        .btn-banner {
+            flex:1; padding:10px; border-radius:var(--radius);
+            font-size:13px; font-weight:600; font-family:'Inter',sans-serif;
+            border:1px solid transparent; cursor:pointer; transition:opacity .2s,transform .1s;
+        }
+        .btn-banner:active { transform:scale(.97); }
+        .btn-review  { background:var(--jw-blue); color:#fff; border-color:var(--jw-blue-dark); }
+        .btn-clear   { background:#fff; color:#DC2626; border-color:#FCA5A5; }
+        .btn-clear:hover { background:#FEF2F2; }
+
+        /* ── DAYS ── */
+        .days-wrapper {
+            background:var(--surface); border-radius:var(--radius-lg);
+            border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden;
+        }
+        .days-scroll { max-height:46vh; overflow-y:auto; padding:4px 0; }
+        .days-scroll::-webkit-scrollbar { width:6px; }
+        .days-scroll::-webkit-scrollbar-track { background:transparent; }
+        .days-scroll::-webkit-scrollbar-thumb { background:#D1D5DB; border-radius:3px; }
+        .day-row {
+            display:flex; align-items:center; padding:10px 16px; gap:12px;
+            border-bottom:1px solid #E5E7EB; transition:background .15s;
+        }
+        .day-row:last-child { border-bottom:none; }
+        .day-row.today { background:var(--today-bg); border-left:4px solid var(--jw-blue); padding-left:12px; }
+        .day-row.weekend .day-label { color:var(--muted); }
+        .day-num {
+            font-family:'Inter',sans-serif; font-size:13px; font-weight:700;
+            width:28px; height:28px; border-radius:var(--radius);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            color:var(--muted); background:var(--surface2); border:1px solid var(--border);
+        }
+        .today .day-num { background:var(--jw-blue); color:#fff; border-color:var(--jw-blue-dark); }
+        .day-label { flex:1; font-size:14px; color:var(--text); display:flex; align-items:center; gap:8px; }
+        .today-tag {
+            font-size:10px; background:var(--jw-blue); color:#fff;
+            padding:1px 6px; border-radius:var(--radius); font-weight:600; letter-spacing:.3px;
+            font-family:'Inter',sans-serif;
+        }
+        input[type="text"] {
+            width:76px; padding:7px 10px; background:#FFF; border:1px solid var(--border);
+            border-radius:var(--radius); font-size:14px; font-family:'Noto Sans',sans-serif;
+            color:var(--text); text-align:center; outline:none;
+            transition:border-color .2s,box-shadow .2s; flex-shrink:0;
+        }
+        input[type="text"]:focus { border-color:var(--jw-blue); box-shadow:0 0 0 3px rgba(44,85,145,.15); }
+        .today input[type="text"] { border-color:var(--today-bd); }
+
+        @keyframes rowFlash { 0% { background:#FFFBEB; } 100% { background:transparent; } }
+        .celebrate-row { animation:rowFlash .8s ease; }
+        .today.celebrate-row { animation:rowFlash .8s ease; }
+
+        /* ── WINK FACE ── */
+        .wink-face {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:76px; height:38px; font-size:24px; border-radius:var(--radius);
+            background:#FFFBEB; border:1px solid #FCD34D; flex-shrink:0;
+            animation:winkAnim 1.8s ease forwards;
+        }
+        @keyframes winkAnim {
+            0%   { transform:scale(.5); opacity:0; }
+            15%  { transform:scale(1.2); opacity:1; }
+            30%  { transform:scale(1); opacity:1; }
+            50%  { transform:scaleY(.85) scale(1); }
+            60%  { transform:scale(1); }
+            80%  { transform:scale(1); opacity:1; }
+            100% { transform:scale(1); opacity:1; }
+        }
+
+        /* ── 💯 SWAP ── */
+        .total-goal-text {
+            font-family:'Inter',sans-serif; font-size:42px; font-weight:700;
+            display:inline-block; line-height:1.2;
+            animation:goalTextIn .5s cubic-bezier(.2,.8,.4,1) forwards;
+        }
+        @keyframes goalTextIn {
+            0%   { transform:scale(.4) rotate(-10deg); opacity:0; }
+            60%  { transform:scale(1.15) rotate(3deg); opacity:1; }
+            100% { transform:scale(1) rotate(0deg); opacity:1; }
+        }
+
+        /* ── FOOTER (dentro de inicio) ── */
+        .footer {
+            background:var(--surface); border-radius:var(--radius-lg);
+            border:1px solid var(--border); box-shadow:var(--shadow);
+            padding:18px 20px; display:flex; flex-direction:column; gap:14px;
+        }
+        .total-block { text-align:center; }
+        .total-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+        .total-value {
+            font-family:'Inter',sans-serif; font-size:44px; font-weight:700;
+            color:var(--jw-blue-dark); transition:color .4s ease; display:inline-block; line-height:1;
+        }
+        .total-unit { font-size:13px; color:var(--muted); margin-top:2px; }
+
+        /* ── CURSOS BÍBLICOS BLOQUE (en inicio) ── */
+        .courses-inline {
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            margin-top:6px; padding:8px 16px;
+            background:var(--surface2); border-radius:var(--radius);
+            border:1px solid var(--border);
+        }
+        .courses-inline-icon { font-size:18px; }
+        .courses-inline-count {
+            font-family:'Inter',sans-serif; font-size:20px; font-weight:700;
+            color:var(--jw-blue-dark);
+        }
+        .courses-inline-label { font-size:12px; color:var(--muted); }
+
+        @keyframes popAndGrow {
+            0%   { transform:scale(1); }
+            40%  { transform:scale(1.25); }
+            60%  { transform:scale(1.18); }
+            80%  { transform:scale(1.22); }
+            100% { transform:scale(1.15); }
+        }
+        .goal-reached { animation:popAndGrow .5s cubic-bezier(.36,.07,.19,.97) forwards; }
+
+        .progress-bar-wrap { background:var(--bg); border-radius:var(--radius); height:8px; overflow:hidden; border:1px solid var(--border); }
+        .progress-bar-fill { height:100%; border-radius:0; width:0%; transition:width .4s ease,background .4s ease; }
+        .progress-info { display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-top:4px; font-family:'Inter',sans-serif; }
+
+        /* ── BUTTONS ── */
+        .btn-wa {
+            display:flex; align-items:center; justify-content:center; gap:10px;
+            background:var(--jw-blue); color:#fff; border:1px solid var(--jw-blue-dark);
+            padding:13px; border-radius:var(--radius); font-size:14px; font-weight:600;
+            font-family:'Inter',sans-serif; cursor:pointer; transition:background .2s,transform .1s; width:100%;
+        }
+        .btn-wa:hover { background:var(--jw-blue-dark); }
+        .btn-wa:active { transform:scale(.98); }
+        .hint { font-size:11px; color:var(--muted); text-align:center; }
+
+        /* ── CARDS DE SECCIONES ── */
+        .section-card {
+            background:var(--surface); border-radius:var(--radius-lg);
+            border:1px solid var(--border); box-shadow:var(--shadow); padding:18px 20px;
+        }
+        .section-title {
+            font-family:'Inter',sans-serif; font-size:15px; font-weight:700;
+            color:var(--jw-blue-dark); margin-bottom:14px;
+            display:flex; align-items:center; gap:8px;
+        }
+        .section-title svg { width:18px; height:18px; stroke:var(--jw-blue); }
+
+        /* ── RESUMEN — gráficas ── */
+        .chart-wrap { position:relative; width:100%; height:180px; }
+        canvas { border-radius:var(--radius); }
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .stat-box {
+            background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+            padding:12px 14px; text-align:center;
+        }
+        .stat-box .val { font-family:'Inter',sans-serif; font-size:22px; font-weight:700; color:var(--jw-blue-dark); }
+        .stat-box .lbl { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-top:2px; }
+
+        /* ── MONTH SELECTOR (resumen) ── */
+        .month-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+        .month-tabs::-webkit-scrollbar { display:none; }
+        .month-tab {
+            flex-shrink:0; padding:5px 12px; border-radius:30px; font-size:12px; font-weight:600;
+            font-family:'Inter',sans-serif; border:1px solid var(--border); background:var(--surface);
+            cursor:pointer; color:var(--muted); transition:all .2s;
+        }
+        .month-tab.active { background:var(--jw-blue); color:#fff; border-color:var(--jw-blue-dark); }
+
+        /* ── CURSOS — lista ── */
+        .course-item {
+            display:flex; align-items:center; gap:12px;
+            padding:12px 0; border-bottom:1px solid #E5E7EB;
+        }
+        .course-item:last-child { border-bottom:none; }
+        .course-avatar {
+            width:36px; height:36px; border-radius:50%; background:var(--jw-blue);
+            display:flex; align-items:center; justify-content:center;
+            font-family:'Inter',sans-serif; font-size:14px; font-weight:700; color:#fff; flex-shrink:0;
+        }
+        .course-info { flex:1; min-width:0; }
+        .course-name { font-size:14px; font-weight:600; color:var(--text); }
+        .course-detail { font-size:11.5px; color:var(--muted); margin-top:1px; }
+        .course-badge {
+            font-size:10px; font-weight:600; padding:2px 7px; border-radius:30px;
+            background:var(--surface2); color:var(--muted); border:1px solid var(--border); flex-shrink:0;
+        }
+        .course-badge.activo { background:#DCFCE7; color:#15803D; border-color:#86EFAC; }
+        .course-badge.irregular { background:#FEF9C3; color:#854D0E; border-color:#FDE68A; }
+        .course-badge.pausado { background:#FEE2E2; color:#991B1B; border-color:#FCA5A5; }
+        .btn-add-course {
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            width:100%; padding:10px; border-radius:var(--radius); font-size:13px;
+            font-weight:600; font-family:'Inter',sans-serif; cursor:pointer;
+            background:var(--surface2); color:var(--jw-blue); border:1px dashed var(--jw-blue-light);
+            transition:background .2s;
+        }
+        .btn-add-course:hover { background:#E2F5E8; }
+        .course-actions { display:flex; gap:6px; }
+        .btn-icon {
+            width:30px; height:30px; border-radius:var(--radius); border:1px solid var(--border);
+            background:var(--surface); cursor:pointer; display:flex; align-items:center;
+            justify-content:center; transition:all .15s; color:var(--muted);
+        }
+        .btn-icon:hover { border-color:var(--jw-blue); color:var(--jw-blue); background:var(--surface2); }
+        .btn-icon.delete:hover { border-color:#FCA5A5; color:#DC2626; background:#FEF2F2; }
+        .btn-icon svg { width:14px; height:14px; stroke-width:2; }
+
+        /* ── MODAL de cursos ── */
+        .modal-overlay {
+            position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,.45); z-index:1000;
+            display:flex; align-items:flex-end; justify-content:center;
+            opacity:0; pointer-events:none; transition:opacity .25s;
+        }
+        .modal-overlay.open { opacity:1; pointer-events:auto; }
+        .modal-sheet {
+            background:var(--surface); border-radius:12px 12px 0 0;
+            padding:24px 20px 32px; width:100%; max-width:480px;
+            transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+            display:flex; flex-direction:column; gap:16px;
+        }
+        .modal-overlay.open .modal-sheet { transform:translateY(0); }
+        .modal-title { font-family:'Inter',sans-serif; font-size:16px; font-weight:700; color:var(--text); }
+        .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto -8px; }
+        .field-label { font-size:12px; font-weight:600; color:var(--text); font-family:'Inter',sans-serif; margin-bottom:5px; display:block; }
+        .field-input {
+            width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius);
+            font-size:14px; font-family:'Inter',sans-serif; color:var(--text);
+            background:#FFF; outline:none; transition:border-color .2s,box-shadow .2s;
+        }
+        .field-input:focus { border-color:var(--jw-blue); box-shadow:0 0 0 3px rgba(44,85,145,.15); }
+        .status-options { display:flex; gap:8px; }
+        .status-opt {
+            flex:1; padding:8px; border-radius:var(--radius); border:1px solid var(--border);
+            font-size:12px; font-weight:600; font-family:'Inter',sans-serif;
+            cursor:pointer; text-align:center; transition:all .2s; color:var(--muted); background:var(--surface2);
+        }
+        .status-opt.sel-activo    { background:#DCFCE7; color:#15803D; border-color:#86EFAC; }
+        .status-opt.sel-irregular { background:#FEF9C3; color:#854D0E; border-color:#FDE68A; }
+        .status-opt.sel-pausado   { background:#FEE2E2; color:#991B1B; border-color:#FCA5A5; }
+        .btn-save {
+            width:100%; padding:13px; border-radius:var(--radius); font-size:14px;
+            font-weight:600; font-family:'Inter',sans-serif; cursor:pointer;
+            background:var(--jw-blue); color:#fff; border:1px solid var(--jw-blue-dark);
+            transition:background .2s,transform .1s;
+        }
+        .btn-save:hover { background:var(--jw-blue-dark); }
+        .btn-save:active { transform:scale(.98); }
+
+        /* ── REVISTAS ── */
+        .revista-item {
+            display:flex; align-items:center; gap:12px;
+            padding:12px 0; border-bottom:1px solid #E5E7EB;
+        }
+        .revista-item:last-child { border-bottom:none; }
+        .revista-cover {
+            width:40px; height:52px; border-radius:3px; background:var(--jw-blue);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            font-size:18px;
+        }
+        .revista-info { flex:1; min-width:0; }
+        .revista-title { font-size:13.5px; font-weight:600; color:var(--text); }
+        .revista-detail { font-size:11.5px; color:var(--muted); margin-top:2px; }
+        .checkbox-wrap { width:24px; height:24px; flex-shrink:0; cursor:pointer; }
+        .checkbox-wrap input[type="checkbox"] { display:none; }
+        .checkbox-custom {
+            width:22px; height:22px; border:2px solid var(--border); border-radius:4px;
+            display:flex; align-items:center; justify-content:center; transition:all .2s;
+        }
+        .checkbox-wrap input:checked + .checkbox-custom {
+            background:var(--jw-blue); border-color:var(--jw-blue-dark);
+        }
+        .checkbox-wrap input:checked + .checkbox-custom::after {
+            content:'✓'; color:#fff; font-size:13px; font-weight:700;
+        }
+        .qty-control { display:flex; align-items:center; gap:6px; }
+        .qty-btn {
+            width:26px; height:26px; border-radius:var(--radius); border:1px solid var(--border);
+            background:var(--surface2); cursor:pointer; font-size:16px; font-weight:700;
+            display:flex; align-items:center; justify-content:center; color:var(--text);
+            transition:all .15s; flex-shrink:0;
+        }
+        .qty-btn:hover { border-color:var(--jw-blue); color:var(--jw-blue); }
+        .qty-val { font-family:'Inter',sans-serif; font-size:14px; font-weight:700; color:var(--text); min-width:20px; text-align:center; }
+        .pending-count {
+            display:inline-flex; align-items:center; justify-content:center;
+            min-width:20px; height:20px; background:#DC2626; color:#fff;
+            font-size:11px; font-weight:700; border-radius:10px; padding:0 5px;
+            font-family:'Inter',sans-serif;
+        }
+
+        /* ── CONFIGURACIÓN ── */
+        .config-row {
+            display:flex; align-items:center; padding:14px 0;
+            border-bottom:1px solid #E5E7EB; gap:12px;
+        }
+        .config-row:last-child { border-bottom:none; }
+        .config-icon {
+            width:36px; height:36px; border-radius:var(--radius);
+            background:var(--surface2); border:1px solid var(--border);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px;
+        }
+        .config-info { flex:1; min-width:0; }
+        .config-label { font-size:13.5px; font-weight:600; color:var(--text); }
+        .config-value { font-size:12px; color:var(--muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .btn-config-action {
+            padding:6px 12px; border-radius:var(--radius); border:1px solid var(--border);
+            font-size:12px; font-weight:600; font-family:'Inter',sans-serif;
+            cursor:pointer; background:var(--surface); color:var(--text); transition:all .15s;
+            flex-shrink:0;
+        }
+        .btn-config-action:hover { border-color:var(--jw-blue); color:var(--jw-blue); }
+        .btn-config-danger { color:#DC2626; border-color:#FCA5A5; }
+        .btn-config-danger:hover { background:#FEF2F2; }
+        .app-version { text-align:center; font-size:11px; color:var(--muted); padding:8px; }
+
+        /* ── LOGIN MODAL ── */
+        .login-modal {
+            position:fixed; top:0; left:0; right:0; bottom:0; background:#F3F3F3;
+            display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;
+        }
+        .login-modal.hidden { display:none; }
+        .login-container {
+            background:#FFFFFF; border:1px solid #E0E0E0;
+            box-shadow:0 2px 6px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04);
+            padding:44px 44px 36px; max-width:420px; width:100%;
+            border-radius:3px; animation:modalIn .25s cubic-bezier(.2,.8,.4,1);
+        }
+        .btn-ms-primary {
+            background:var(--jw-blue); color:#FFFFFF; font-family:'Segoe UI',-apple-system,sans-serif;
+            font-size:15px; padding:0 20px; min-width:108px; height:36px;
+            border:none; border-radius:2px; cursor:pointer; transition:background .15s; letter-spacing:.01em;
+        }
+        .btn-ms-primary:hover { background:var(--jw-blue-dark); }
+        .btn-ms-primary:active { transform:scale(.99); }
+        .btn-ms-secondary {
+            background:transparent; color:var(--jw-blue); font-family:'Segoe UI',-apple-system,sans-serif;
+            font-size:13px; padding:0 12px; min-width:80px; height:36px;
+            border:1px solid #8A8A8A; border-radius:2px; cursor:pointer; transition:background .15s,border-color .15s;
+        }
+        .btn-ms-secondary:hover { background:#F0F0F0; border-color:#606060; }
+        @keyframes modalIn {
+            0%   { transform:translateY(16px); opacity:0; }
+            100% { transform:translateY(0); opacity:1; }
+        }
+        .form-group { margin-bottom:16px; display:flex; flex-direction:column; gap:6px; }
+        .form-group label { font-size:12.5px; font-weight:600; color:var(--text); font-family:'Inter',sans-serif; }
+        .form-group input, .form-group select {
+            padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius);
+            font-size:14px; font-family:'Inter',sans-serif; color:var(--text);
+            background:#FFFFFF; outline:none; transition:border-color .2s,box-shadow .2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color:var(--jw-blue); box-shadow:0 0 0 3px rgba(44,85,145,.15);
+        }
+        .precursor-options { display:flex; gap:10px; margin-top:4px; }
+        .precursor-option {
+            flex:1; padding:10px; border:1px solid var(--border); border-radius:var(--radius);
+            background:var(--surface2); cursor:pointer; font-size:13px; font-weight:600;
+            text-align:center; transition:all .2s; color:var(--text);
+        }
+        .precursor-option:hover { border-color:var(--jw-blue-light); }
+        .precursor-option.selected { background:var(--jw-blue)!important; border-color:var(--jw-blue-dark)!important; color:#fff!important; box-shadow:0 0 0 2px rgba(44,85,145,.25); }
+        .precursor-option.selected div, .precursor-option.selected span { color:#fff!important; }
+        .form-actions { display:flex; gap:10px; margin-top:24px; }
+        .btn-login { flex:1; padding:11px; border:1px solid transparent; border-radius:var(--radius); font-size:14px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; transition:background .2s,transform .1s; }
+        .btn-login:active { transform:scale(.97); }
+        .btn-login-primary { background:var(--jw-blue); color:#fff; border-color:var(--jw-blue-dark); }
+        .btn-login-primary:hover { background:var(--jw-blue-dark); }
+        .btn-login-secondary { background:var(--surface2); color:var(--text); border-color:var(--border); }
+
+        /* ── SPOTLIGHT TUTORIAL ── */
+        .spotlight-overlay {
+            position:fixed; top:0; left:0; right:0; bottom:0; z-index:5000;
+            pointer-events:none; opacity:0; transition:opacity .3s ease;
+        }
+        .spotlight-overlay.active { pointer-events:auto; opacity:1; }
+        .spotlight-mask {
+            position:fixed; top:0; left:0; right:0; bottom:0;
+            background:rgba(22,98,42,.35); z-index:5001;
+            -webkit-mask:url(#spotMask); mask:url(#spotMask);
+            -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+        }
+        .spotlight-highlight {
+            position:fixed; border:3px solid var(--jw-blue-light); border-radius:var(--radius-lg);
+            box-shadow:0 0 0 6px rgba(35,156,67,.2), 0 0 20px rgba(35,156,67,.4), 0 0 40px rgba(35,156,67,.2);
+            z-index:5002; pointer-events:none; animation:pulseHighlight 2s infinite;
+        }
+        @keyframes pulseHighlight {
+            0%,100% { box-shadow:0 0 0 6px rgba(35,156,67,.2), 0 0 20px rgba(35,156,67,.4), 0 0 40px rgba(35,156,67,.2); }
+            50%      { box-shadow:0 0 0 8px rgba(35,156,67,.3), 0 0 30px rgba(35,156,67,.5), 0 0 60px rgba(35,156,67,.3); }
+        }
+        .spotlight-tooltip {
+            position:fixed; background:var(--surface); border-radius:var(--radius-lg);
+            border:1px solid var(--border); border-top:4px solid var(--jw-blue);
+            box-shadow:var(--shadow-lg); padding:16px; width:calc(100vw - 32px);
+            max-width:320px; z-index:5005; opacity:0; transform:translateY(8px);
+            transition:opacity .3s ease,transform .3s ease; pointer-events:auto; box-sizing:border-box;
+        }
+        .spotlight-target { position:relative; z-index:5004!important; filter:brightness(1.08) saturate(1.04); }
+        .spotlight-tooltip.active { opacity:1; transform:translateY(0); }
+        .spotlight-tooltip h3 { font-family:'Inter',sans-serif; font-size:14px; font-weight:700; color:var(--jw-blue-dark); margin-bottom:6px; }
+        .spotlight-tooltip p { font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:10px; }
+        .spotlight-actions { display:flex; gap:8px; justify-content:flex-end; }
+        .btn-spotlight { padding:6px 12px; border:1px solid transparent; border-radius:var(--radius); font-size:12px; font-weight:600; cursor:pointer; transition:opacity .2s; }
+        .btn-spotlight:hover { opacity:.85; }
+        .btn-next { background:var(--jw-blue); color:#fff; border-color:var(--jw-blue-dark); }
+        .btn-skip { background:var(--surface2); color:var(--text); border-color:var(--border); }
+
+        /* ── EMPTY STATE ── */
+        .empty-state { text-align:center; padding:32px 20px; }
+        .empty-state .empty-icon { font-size:40px; margin-bottom:10px; }
+        .empty-state h3 { font-family:'Inter',sans-serif; font-size:15px; font-weight:600; color:var(--text); margin-bottom:5px; }
+        .empty-state p { font-size:12.5px; color:var(--muted); line-height:1.5; }
+
+        /* ── DONUT CHART ── */
+        .donut-wrap { display:flex; align-items:center; gap:20px; }
+        .donut-canvas { flex-shrink:0; }
+        .donut-legend { flex:1; display:flex; flex-direction:column; gap:7px; }
+        .legend-item { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text); }
+        .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+        /* ── YEAR SUMMARY BAR ── */
+        .bar-chart { display:flex; align-items:flex-end; gap:4px; height:100px; padding-top:10px; }
+        .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+        .bar-fill {
+            width:100%; background:var(--jw-blue-light); border-radius:3px 3px 0 0;
+            min-height:4px; transition:height .4s ease; position:relative;
+            display:flex; align-items:flex-start; justify-content:center;
+        }
+        .bar-fill.goal { background:var(--jw-blue); }
+        .bar-fill.over { background:var(--jw-blue-dark); }
+        .bar-val { font-size:9px; font-family:'Inter',sans-serif; font-weight:600; color:var(--jw-blue-dark); margin-top:2px; }
+        .bar-label { font-size:9px; color:var(--muted); font-family:'Inter',sans-serif; font-weight:500; }
+
+        /* Responsive */
+        @media (max-width: 360px) {
+            .login-container { padding:28px 20px 24px; }
+            .bar-label { font-size:8px; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- LOGIN MODAL                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="login-modal" id="loginModal">
+    <div class="login-container">
+        <div style="margin-bottom:28px; display:flex; align-items:center; gap:12px;">
+            <img src="logo.jpeg" alt="Logo" style="width:44px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;line-height:1.2;">
+                <span style="font-family:'Segoe UI',-apple-system,sans-serif;font-size:20px;font-weight:700;color:#1B1B1B;letter-spacing:-.3px;">JW Timesheet</span>
+                <span style="font-family:'Segoe UI',-apple-system,sans-serif;font-size:11px;color:#767676;letter-spacing:.2px;">Registro de Horas</span>
+            </div>
+        </div>
+
+        <form id="loginForm" onsubmit="guardarLogin(event)">
+            <div style="overflow:hidden;width:100%;">
+                <div class="login-steps" style="display:flex;transition:transform .35s cubic-bezier(.4,0,.2,1);width:300%;">
+
+                    <!-- STEP 1: NOMBRE -->
+                    <div style="width:33.333%;flex-shrink:0;padding-right:1px;">
+                        <h1 style="font-family:'Segoe UI',-apple-system,sans-serif;font-size:24px;font-weight:600;color:#1B1B1B;margin-bottom:8px;">Iniciar sesión</h1>
+                        <p style="font-size:13px;color:#505050;margin-bottom:20px;line-height:1.5;">Escribe tu nombre para comenzar a registrar tus horas de servicio.</p>
+                        <div class="form-group" style="margin-bottom:24px;">
+                            <input type="text" id="nombreLogin" placeholder="Nombre completo" required
+                                style="width:100%;height:36px;border:1px solid #8A8A8A;border-radius:0;font-family:'Segoe UI',sans-serif;font-size:14px;padding:6px 10px;outline:none;background:#FFF;"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('btn-step1-next').click();}">
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+                            <button type="button" id="btn-step1-next" class="btn-ms-primary"
+                                onclick="const i=document.getElementById('nombreLogin');if(i.reportValidity()){document.querySelector('.login-steps').style.transform='translateX(-33.333%)';}">Siguiente</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: PRECURSOR -->
+                    <div style="width:33.333%;flex-shrink:0;padding:0 10px 0 1px;">
+                        <h1 style="font-family:'Segoe UI',-apple-system,sans-serif;font-size:24px;font-weight:600;color:#1B1B1B;margin-bottom:8px;">Tipo de precursor</h1>
+                        <p style="font-size:13px;color:#505050;margin-bottom:20px;line-height:1.5;">Selecciona tu meta mensual de horas de predicación.</p>
+                        <div class="form-group" style="margin-bottom:24px;">
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <div class="precursor-option" data-type="auxiliar" onclick="seleccionarPrecursor('auxiliar',this)"
+                                    style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #D1D5DB;cursor:pointer;text-align:left;border-radius:2px;">
+                                    <span style="font-size:22px;flex-shrink:0;">📋</span>
+                                    <div><div style="font-weight:600;font-size:13.5px;">Precursor Auxiliar</div><div style="font-size:11px;color:#6B7280;">Meta mensual de 30 horas</div></div>
+                                </div>
+                                <div class="precursor-option" data-type="regular" onclick="seleccionarPrecursor('regular',this)"
+                                    style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #D1D5DB;cursor:pointer;text-align:left;border-radius:2px;">
+                                    <span style="font-size:22px;flex-shrink:0;">⭐</span>
+                                    <div><div style="font-weight:600;font-size:13.5px;">Precursor Regular</div><div style="font-size:11px;color:#6B7280;">Meta mensual de 50 horas</div></div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="tipoPrecursor" required>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                            <button type="button" class="btn-ms-secondary" onclick="document.querySelector('.login-steps').style.transform='translateX(0%)';">Atrás</button>
+                            <button type="button" id="btn-step2-next" class="btn-ms-primary"
+                                onclick="const t=document.getElementById('tipoPrecursor').value;if(t){document.querySelector('.login-steps').style.transform='translateX(-66.666%)';}else{alert('Por favor selecciona tu tipo de precursor');}">Siguiente</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: SUPERVISOR -->
+                    <div style="width:33.333%;flex-shrink:0;padding-left:1px;">
+                        <h1 style="font-family:'Segoe UI',-apple-system,sans-serif;font-size:24px;font-weight:600;color:#1B1B1B;margin-bottom:8px;">Super de grupo</h1>
+                        <p style="font-size:13px;color:#505050;margin-bottom:20px;line-height:1.5;">Ingresa el número de WhatsApp de su super de grupo para enviar los informes.</p>
+                        <div class="form-group" style="margin-bottom:24px;">
+                            <input type="tel" id="supervisorLogin" placeholder="Número de WhatsApp (ej: 573001234567)" required
+                                style="width:100%;height:36px;border:1px solid #8A8A8A;border-radius:0;font-family:'Segoe UI',sans-serif;font-size:14px;padding:6px 10px;outline:none;background:#FFF;">
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                            <button type="button" class="btn-ms-secondary" onclick="document.querySelector('.login-steps').style.transform='translateX(-33.333%)';">Atrás</button>
+                            <button type="submit" class="btn-ms-primary" style="font-weight:600;">Comenzar ✓</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SPOTLIGHT TUTORIAL                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="spotlight-overlay" id="spotlightOverlay">
+    <svg id="spotlightSVG" width="100%" height="100%" style="position:fixed;top:0;left:0;pointer-events:none;z-index:5001">
+        <defs>
+            <mask id="spotMask" maskUnits="userSpaceOnUse">
+                <rect width="100%" height="100%" fill="white"></rect>
+                <rect id="spotHole" x="0" y="0" width="0" height="0" rx="12" fill="black"></rect>
+            </mask>
+        </defs>
+    </svg>
+    <div class="spotlight-mask" id="spotlightMask"></div>
+    <div class="spotlight-highlight" id="spotlightHighlight"></div>
+    <div class="spotlight-tooltip" id="spotlightTooltip">
+        <h3 id="tooltipTitle"></h3>
+        <p id="tooltipText"></p>
+        <div class="spotlight-actions">
+            <button class="btn-spotlight btn-skip" onclick="saltarTutorial()">Omitir</button>
+            <button class="btn-spotlight btn-next" onclick="avanzarTutorial()">Siguiente →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL — AGREGAR / EDITAR CURSO BÍBLICO                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="courseModal" onclick="cerrarModalCurso(event)">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title" id="courseModalTitle">Agregar curso bíblico</div>
+        <input type="hidden" id="courseEditId">
+        <div>
+            <label class="field-label">Nombre del estudiante</label>
+            <input type="text" id="courseNameInput" class="field-input" placeholder="Ej: Juan García">
+        </div>
+        <div>
+            <label class="field-label">Día(s) / frecuencia</label>
+            <input type="text" id="courseFreqInput" class="field-input" placeholder="Ej: Martes, semanal">
+        </div>
+        <div>
+            <label class="field-label">Dirección</label>
+            <input type="text" id="courseDirInput" class="field-input" placeholder="Ej: Calle 5 # 12-34, Apto 301">
+        </div>
+        <div>
+            <label class="field-label">Notas</label>
+            <textarea id="courseNotasInput" class="field-input" rows="2" placeholder="Ej: Muy receptivo, tiene Biblia propia..." style="resize:none;line-height:1.5;"></textarea>
+        </div>
+        <button class="btn-save" onclick="guardarCurso()">Guardar</button>
+    </div>
+</div>
+
+<!-- MODAL — ¿Ya tomó el curso de la Biblia? -->
+<div class="modal-overlay" id="cursoBiblicoModal">
+    <div class="modal-sheet" style="text-align:center;">
+        <div class="modal-handle"></div>
+        <div style="font-size:36px;margin-bottom:6px;">📖</div>
+        <div class="modal-title" style="text-align:center;" id="cursoBiblicoModalNombre"></div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px;">¿Ya aceptó tomar un curso de la Biblia?</p>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button class="btn-save" style="background:#DC2626;border-color:#991B1B;flex:1;padding:11px;" onclick="respuestaCursoBiblico(false)">No, aún no</button>
+            <button class="btn-save" style="flex:1;padding:11px;" onclick="respuestaCursoBiblico(true)">✅ ¡Sí!</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- APP PRINCIPAL                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="app" id="appMain">
+
+    <!-- ─── HEADER FIJO (sin logo) ─── -->
+    <header class="header" id="appHeader">
+        <div class="header-info" onclick="editarNombre()">
+            <h1>Mi Servicio</h1>
+            <p id="nombrePersona">Toca aquí para ingresar tu nombre</p>
+        </div>
+        <div class="month-pill" id="monthLabel"></div>
+    </header>
+
+    <!-- ══════════════════ SECCIÓN 1 — INICIO ══════════════════ -->
+    <div class="section-view active" id="view-inicio">
+
+        <!-- Banner nuevo mes -->
+        <div class="new-month-banner" id="newMonthBanner">
+            <div class="banner-top">
+                <div class="banner-icon">📅</div>
+                <div class="banner-body">
+                    <h3>¡Nuevo mes, nuevas horas!</h3>
+                    <p>¿Quieres revisar el informe de <strong id="prevMonthName"></strong> o borrar los datos para comenzar de nuevo?</p>
+                </div>
+            </div>
+            <div class="banner-actions">
+                <button class="btn-banner btn-review" onclick="revisarMesAnterior()">📋 Revisar primero</button>
+                <button class="btn-banner btn-clear" onclick="confirmarBorrado()">🗑️ Borrar y empezar</button>
+            </div>
+        </div>
+
+        <!-- Lista de días -->
+        <div class="days-wrapper">
+            <div class="days-scroll" id="daysList"></div>
+        </div>
+
+        <!-- Footer: total + cursos + progreso + WA -->
+        <footer class="footer">
+            <div class="total-block">
+                <div class="total-label">Total del mes</div>
+                <div class="total-value" id="totalDisplay">0:00 hr</div>
+            </div>
+
+            <!-- Cursos bíblicos inline -->
+            <div class="courses-inline" id="coursesInlineBlock">
+                <span class="courses-inline-icon">📖</span>
+                <span class="courses-inline-count" id="coursesInlineCount">0</span>
+                <span class="courses-inline-label">cursos bíblicos activos</span>
+            </div>
+
+            <div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-info">
+                    <span>0 hr</span>
+                    <span id="progressPct">0%</span>
+                    <span id="metaLabel">Meta: 30 hr</span>
+                </div>
+            </div>
+
+            <button class="btn-wa" id="btnWA" onclick="enviarWhatsApp()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#FFFFFF" viewBox="0 0 16 16" style="flex-shrink:0;">
+                    <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c-.003 1.396.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 1 1 5.18 3.094zm3.193-4.25c-.175-.09-1.033-.51-1.193-.57-.16-.06-.276-.09-.39.09-.115.18-.445.57-.545.69-.1.12-.2.135-.375.045-.175-.09-.74-.272-1.408-.871-.52-.464-.871-1.037-.973-1.212-.102-.175-.01-.27.078-.358.079-.078.175-.205.263-.308.09-.102.12-.175.18-.293.06-.118.03-.22-.015-.31-.045-.09-.39-.94-.534-1.285-.14-.338-.283-.292-.39-.297-.1-.005-.215-.005-.33-.005-.115 0-.303.045-.46.216-.157.171-.6.586-.6 1.428s.61 1.65.695 1.77c.085.12 1.2 1.83 2.906 2.57.406.176.721.28.967.36.408.13.78.072 1.073.028.328-.05 1.033-.42 1.18-.826.147-.406.147-.755.103-.826-.045-.07-.16-.118-.336-.207z"/>
+                </svg>
+                Enviar Informe por WhatsApp
+            </button>
+            <p class="hint">Escribe "2", "1.5" o "2:30" — se guarda automáticamente ✓</p>
+        </footer>
+    </div>
+
+    <!-- ══════════════════ SECCIÓN 2 — RESUMEN ══════════════════ -->
+    <div class="section-view" id="view-resumen">
+
+        <!-- Tabs de meses -->
+        <div class="section-card" style="padding:14px 16px;">
+            <div class="month-tabs" id="monthTabs"></div>
+        </div>
+
+        <!-- Stats del mes seleccionado -->
+        <div class="section-card" id="resumenStatsCard">
+            <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <span id="resumenMesTitle">Resumen del mes</span>
+            </div>
+            <div class="stat-grid" id="resumenStatGrid"></div>
+        </div>
+
+        <!-- Gráfica de barras del año -->
+        <div class="section-card">
+            <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Progreso del año <span id="anoLabel" style="color:var(--muted);font-weight:400;font-size:13px;"></span>
+            </div>
+            <div class="bar-chart" id="barChart"></div>
+        </div>
+
+        <!-- Donut de distribución -->
+        <div class="section-card">
+            <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                Distribución semana/fin de semana
+            </div>
+            <div class="donut-wrap" id="donutWrap">
+                <canvas id="donutCanvas" width="100" height="100" class="donut-canvas"></canvas>
+                <div class="donut-legend" id="donutLegend"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ SECCIÓN 3 — CURSOS BÍBLICOS ══════════════════ -->
+    <div class="section-view" id="view-cursos">
+        <div class="section-card">
+            <div class="section-title" style="justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;stroke:var(--jw-blue)"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Cursos bíblicos
+                </span>
+                <span id="cursosCountBadge" style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);font-weight:500;"></span>
+            </div>
+            <div id="cursosList"></div>
+        </div>
+        <button class="btn-add-course" onclick="abrirModalCurso()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;stroke-width:2.5;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar estudiante
+        </button>
+    </div>
+
+    <!-- ══════════════════ SECCIÓN 4 — REVISITAS ══════════════════ -->
+    <div class="section-view" id="view-revistas">
+        <!-- Nuevas revisitas -->
+        <div class="section-card">
+            <div class="section-title" style="justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;stroke:var(--jw-blue)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Revisitas nuevas
+                </span>
+                <span id="revistasNuevasBadge"></span>
+            </div>
+            <div id="revistasNuevasList"></div>
+        </div>
+
+        <!-- Sub-sección: Revisitas por revisitar -->
+        <div class="section-card" id="revistasRevisitarCard">
+            <div class="section-title" style="justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;stroke:#D97706"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.17"/></svg>
+                    <span style="color:#92400E;">Revisitas por revisitar</span>
+                </span>
+                <span id="revistasRevisitarBadge"></span>
+            </div>
+            <div id="revistasRevisitarList"></div>
+        </div>
+
+        <button class="btn-add-course" onclick="abrirModalRevista()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;stroke-width:2.5;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar revisita
+        </button>
+    </div>
+
+    <!-- ══════════════════ SECCIÓN 5 — CONFIGURACIÓN ══════════════════ -->
+    <div class="section-view" id="view-config">
+        <div class="section-card">
+            <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:18px;height:18px;stroke:var(--jw-blue)"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Configuración
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">👤</div>
+                <div class="config-info">
+                    <div class="config-label">Nombre</div>
+                    <div class="config-value" id="cfgNombre">—</div>
+                </div>
+                <button class="btn-config-action" onclick="editarNombreConfig()">Editar</button>
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">🎯</div>
+                <div class="config-info">
+                    <div class="config-label">Tipo de precursor</div>
+                    <div class="config-value" id="cfgTipo">—</div>
+                </div>
+                <button class="btn-config-action" onclick="editarTipoConfig()">Cambiar</button>
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">📱</div>
+                <div class="config-info">
+                    <div class="config-label">Número del super de grupo</div>
+                    <div class="config-value" id="cfgWA">—</div>
+                </div>
+                <button class="btn-config-action" onclick="editarWAConfig()">Editar</button>
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">📚</div>
+                <div class="config-info">
+                    <div class="config-label">Tutorial</div>
+                    <div class="config-value">Ver el tutorial de la app</div>
+                </div>
+                <button class="btn-config-action" onclick="verTutorial()">Ver</button>
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">🗑️</div>
+                <div class="config-info">
+                    <div class="config-label">Borrar datos del mes actual</div>
+                    <div class="config-value">Esta acción no se puede deshacer</div>
+                </div>
+                <button class="btn-config-action btn-config-danger" onclick="borrarMesActual()">Borrar</button>
+            </div>
+
+            <div class="config-row">
+                <div class="config-icon">⚠️</div>
+                <div class="config-info">
+                    <div class="config-label">Restablecer todo</div>
+                    <div class="config-value">Borra todos los datos y configuración</div>
+                </div>
+                <button class="btn-config-action btn-config-danger" onclick="restablecerTodo()">Reset</button>
+            </div>
+        </div>
+
+        <div class="app-version">JW Timesheet v2.0 · Hecho con ❤️ para precursores</div>
+    </div>
+
+</div><!-- /.app -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- BOTTOM NAV                                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav" id="bottomNav">
+    <!-- Inicio -->
+    <button class="nav-item active" id="nav-inicio" onclick="navigateTo('inicio')" aria-label="Inicio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+            <path d="M9 21V12h6v9"/>
+        </svg>
+        <span class="nav-label">Inicio</span>
+    </button>
+
+    <!-- Resumen -->
+    <button class="nav-item" id="nav-resumen" onclick="navigateTo('resumen')" aria-label="Resumen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="3" y1="15" x2="21" y2="15"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+        </svg>
+        <span class="nav-label">Resumen</span>
+    </button>
+
+    <!-- Cursos -->
+    <button class="nav-item" id="nav-cursos" onclick="navigateTo('cursos')" aria-label="Cursos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+        <span class="nav-label">Cursos</span>
+    </button>
+
+    <!-- Revistas -->
+    <button class="nav-item" id="nav-revistas" onclick="navigateTo('revistas')" aria-label="Revistas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span class="nav-label">Revistas</span>
+    </button>
+
+    <!-- Configuración -->
+    <button class="nav-item" id="nav-config" onclick="navigateTo('config')" aria-label="Configuración">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span class="nav-label">Config.</span>
+    </button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL — AGREGAR REVISITA                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="revistaModal" onclick="cerrarModalRevista(event)">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title" id="revistaModalTitle">Agregar revisita</div>
+        <input type="hidden" id="revistaEditId">
+        <div>
+            <label class="field-label">Nombre de la persona</label>
+            <input type="text" id="revistaTituloInput" class="field-input" placeholder="Ej: María López">
+        </div>
+        <div>
+            <label class="field-label">Día(s) / frecuencia</label>
+            <input type="text" id="revistaDiaInput" class="field-input" placeholder="Ej: Martes, quincenal">
+        </div>
+        <div>
+            <label class="field-label">Dirección</label>
+            <input type="text" id="revistaDestinoInput" class="field-input" placeholder="Ej: Calle 5 # 12-34">
+        </div>
+        <div>
+            <label class="field-label">Notas</label>
+            <textarea id="revistaNotasInput" class="field-input" rows="2" placeholder="Ej: Le interesó el tema del paraíso..." style="resize:none;line-height:1.5;"></textarea>
+        </div>
+        <button class="btn-save" onclick="guardarRevista()">Guardar</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script>
+// ─── CONSTANTES DE STORAGE ─────────────────────────────────────────────────
+const KEY_WA            = 'wa_number';
+const KEY_NOMBRE        = 'nombre_persona';
+const KEY_TIPO_PRECURSOR= 'tipo_precursor';
+const KEY_SUPERVISOR    = 'supervisor_grupo';
+const KEY_TUTORIAL_SEEN = 'tutorial_seen';
+const KEY_CURSOS        = 'cursos_biblicos';
+const KEY_REVISTAS      = 'revistas_pendientes';
+
+const PRECURSOR_CONFIG = {
+    auxiliar: { horas: 30, nombre: 'Precursor Auxiliar' },
+    regular:  { horas: 50, nombre: 'Precursor Regular'  }
+};
+
+// ─── ESTADO ─────────────────────────────────────────────────────────────────
+let NOMBRE         = localStorage.getItem(KEY_NOMBRE)        || '';
+let TIPO_PRECURSOR = localStorage.getItem(KEY_TIPO_PRECURSOR)|| 'auxiliar';
+let SUPERVISOR     = localStorage.getItem(KEY_SUPERVISOR)     || '';
+let WA_NUMBER      = localStorage.getItem(KEY_WA)            || SUPERVISOR || '';
+if (SUPERVISOR && !localStorage.getItem(KEY_WA))       { localStorage.setItem(KEY_WA, SUPERVISOR); }
+if (WA_NUMBER  && !localStorage.getItem(KEY_SUPERVISOR)){ localStorage.setItem(KEY_SUPERVISOR, WA_NUMBER); SUPERVISOR = WA_NUMBER; }
+
+let META_HORAS = PRECURSOR_CONFIG[TIPO_PRECURSOR].horas;
+let META_MINS  = META_HORAS * 60;
+
+// ─── FECHAS ─────────────────────────────────────────────────────────────────
+const hoy      = new Date();
+const year     = hoy.getFullYear();
+const month    = hoy.getMonth();
+const diaHoy   = hoy.getDate();
+const diasMes  = new Date(year, month + 1, 0).getDate();
+
+const meses      = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const diasSemana = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DIAS_FULL  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+const mesNombre = meses[month];
+const prevMes   = month === 0 ? 11 : month - 1;
+const prevYear  = month === 0 ? year - 1 : year;
+
+document.getElementById('monthLabel').textContent = `${mesNombre} ${year}`;
+document.getElementById('prevMonthName').textContent = meses[prevMes];
+document.getElementById('anoLabel').textContent = year;
+
+// ─── STORAGE KEYS ────────────────────────────────────────────────────────────
+const KEY_CUR         = `servicio_${year}_${month}`;
+const KEY_PREV        = `servicio_${prevYear}_${prevMes}`;
+const KEY_BANNER_SEEN = `banner_seen_${year}_${month}`;
+
+let datos = JSON.parse(localStorage.getItem(KEY_CUR)) || {};
+let cursos  = JSON.parse(localStorage.getItem(KEY_CURSOS))  || [];
+let revistas= JSON.parse(localStorage.getItem(KEY_REVISTAS))|| [];
+
+// ─── LOGIN ───────────────────────────────────────────────────────────────────
+const loginModal = document.getElementById('loginModal');
+const appMain    = document.getElementById('appMain');
+const bottomNav  = document.getElementById('bottomNav');
+
+function verificarLogin() {
+    if (!NOMBRE || !TIPO_PRECURSOR || !SUPERVISOR) {
+        loginModal.classList.remove('hidden');
+        appMain.style.display  = 'none';
+        bottomNav.style.display= 'none';
+        return false;
+    } else {
+        loginModal.classList.add('hidden');
+        appMain.style.display  = 'flex';
+        bottomNav.style.display= 'flex';
+        return true;
+    }
+}
+
+function seleccionarPrecursor(tipo, elemento) {
+    document.querySelectorAll('.precursor-option').forEach(el => el.classList.remove('selected'));
+    elemento.classList.add('selected');
+    document.getElementById('tipoPrecursor').value = tipo;
+}
+
+function guardarLogin(e) {
+    e.preventDefault();
+    const nombre    = document.getElementById('nombreLogin').value.trim();
+    const tipo      = document.getElementById('tipoPrecursor').value;
+    const supInput  = document.getElementById('supervisorLogin').value.trim();
+    if (!nombre || !tipo || !supInput) { alert('Por favor completa todos los campos'); return; }
+    const supLimpio = supInput.replace(/\D/g,'');
+    if (!supLimpio) { alert('Por favor ingresa un número de WhatsApp válido'); return; }
+
+    NOMBRE = nombre; TIPO_PRECURSOR = tipo; SUPERVISOR = supLimpio; WA_NUMBER = supLimpio;
+    META_HORAS = PRECURSOR_CONFIG[tipo].horas; META_MINS = META_HORAS * 60;
+    localStorage.setItem(KEY_NOMBRE, NOMBRE);
+    localStorage.setItem(KEY_TIPO_PRECURSOR, TIPO_PRECURSOR);
+    localStorage.setItem(KEY_SUPERVISOR, SUPERVISOR);
+    localStorage.setItem(KEY_WA, WA_NUMBER);
+    location.reload();
+}
+
+// ─── HEADER ──────────────────────────────────────────────────────────────────
+function actualizarHeaderNombre() {
+    document.getElementById('nombrePersona').textContent = NOMBRE || 'Toca aquí para ingresar tu nombre';
+}
+function editarNombre() {
+    const n = prompt('¿Cuál es tu nombre?', NOMBRE);
+    if (n !== null && n.trim() !== '') {
+        NOMBRE = n.trim();
+        localStorage.setItem(KEY_NOMBRE, NOMBRE);
+        actualizarHeaderNombre();
+        actualizarConfigView();
+    }
+}
+
+// ─── NAVEGACIÓN ──────────────────────────────────────────────────────────────
+let currentSection = 'inicio';
+
+function navigateTo(section) {
+    if (currentSection === section) return;
+    document.getElementById(`view-${currentSection}`).classList.remove('active');
+    document.getElementById(`nav-${currentSection}`).classList.remove('active');
+    currentSection = section;
+    document.getElementById(`view-${section}`).classList.add('active');
+    document.getElementById(`nav-${section}`).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (section === 'resumen')  renderResumen();
+    if (section === 'cursos')   renderCursos();
+    if (section === 'revistas') renderRevistas();
+    if (section === 'config')   actualizarConfigView();
+}
+
+// ─── BANNER NUEVO MES ────────────────────────────────────────────────────────
+const prevData = JSON.parse(localStorage.getItem(KEY_PREV)) || {};
+const prevTieneData = Object.values(prevData).some(v => v && v.trim() !== '');
+if (prevTieneData && !localStorage.getItem(KEY_BANNER_SEEN)) {
+    document.getElementById('newMonthBanner').classList.add('visible');
+}
+
+function revisarMesAnterior() {
+    localStorage.setItem(KEY_BANNER_SEEN,'1');
+    document.getElementById('newMonthBanner').classList.remove('visible');
+    if (!NOMBRE) { editarNombre(); if (!NOMBRE) return; }
+    let totalPrev = calcularTotalMinutos(prevData, new Date(prevYear, prevMes+1, 0).getDate());
+    let msg = `*INFORME DE PREDICACIÓN*\n\n*Nombre*: ${NOMBRE}\n*Mes*: ${meses[prevMes]} ${prevYear}\n\n*Horas*: ${minutosAHora(totalPrev)}\n*Cursos bíblicos*: ${cursos.length}\n\n_Feliz de servir a Jehová_ 🙏`;
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+function confirmarBorrado() {
+    if (confirm(`¿Seguro que quieres borrar los datos de ${meses[prevMes]}? Esta acción no se puede deshacer.`)) {
+        localStorage.removeItem(KEY_PREV);
+        localStorage.setItem(KEY_BANNER_SEEN,'1');
+        document.getElementById('newMonthBanner').classList.remove('visible');
+    }
+}
+
+// ─── RENDER DÍAS ─────────────────────────────────────────────────────────────
+const container = document.getElementById('daysList');
+
+if (verificarLogin()) {
+    for (let d = 1; d <= diasMes; d++) {
+        const fecha = new Date(year, month, d);
+        const dow   = fecha.getDay();
+        const esHoy = (d === diaHoy);
+        const esWE  = (dow === 0 || dow === 6);
+        const row   = document.createElement('div');
+        row.className = 'day-row'+(esHoy?' today':'')+(esWE?' weekend':'');
+        if (esHoy) row.id = 'fila_hoy';
+        const val = datos[`dia_${d}`] || '';
+        row.innerHTML = `
+            <div class="day-num">${d}</div>
+            <div class="day-label">${DIAS_FULL[dow]}${esHoy?' <span class="today-tag">Hoy</span>':''}</div>
+            <input type="text" id="dia_${d}" value="${val}" placeholder="0:00"
+                   oninput="alCambiar(${d},this.value)" onblur="alSalir(${d},this.value)" autocomplete="off">
+        `;
+        container.appendChild(row);
+    }
+    setTimeout(() => {
+        const el = document.getElementById('fila_hoy');
+        if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+    }, 300);
+}
+
+// ─── PARSER ──────────────────────────────────────────────────────────────────
+function parsearMinutos(val) {
+    val = val.trim(); if (!val) return 0;
+    if (val.includes(':')) { const [h,m]=val.split(':').map(x=>parseInt(x)||0); return h*60+m; }
+    val = val.replace(',','.'); const n=parseFloat(val); return isNaN(n)?0:Math.round(n*60);
+}
+function minutosAHora(mins) {
+    const h=Math.floor(mins/60), m=mins%60; return `${h}:${m<10?'0':''}${m}`;
+}
+function calcularTotalMinutos(obj, totalDias) {
+    let t=0; for (let d=1;d<=totalDias;d++) t+=parsearMinutos(obj[`dia_${d}`]||''); return t;
+}
+
+// ─── COLOR PROGRESO ──────────────────────────────────────────────────────────
+const C_GREEN=[52,168,83], C_RED=[234,67,53], C_YELLOW=[251,188,5];
+function lerpColor(c1,c2,t){ return c1.map((v,i)=>Math.round(v+(c2[i]-v)*t)); }
+function obtenerColorProgreso(minutos) {
+    if (minutos<=0) return `rgb(${C_GREEN.join(',')})`;
+    const mitad=META_MINS/2;
+    if (minutos<=mitad) { const t=minutos/mitad; return `rgb(${lerpColor(C_GREEN,C_RED,t).join(',')})`; }
+    const t=Math.min((minutos-mitad)/mitad,1); return `rgb(${lerpColor(C_RED,C_YELLOW,t).join(',')})`;
+}
+
+// ─── ACTUALIZAR UI ───────────────────────────────────────────────────────────
+let metaYaAlcanzada = false, goalSwapTimer = null;
+
+function actualizarUI() {
+    let totalMins = 0;
+    for (let d=1;d<=diasMes;d++) totalMins += parsearMinutos(datos[`dia_${d}`]||'');
+    const totalEl = document.getElementById('totalDisplay');
+    if (totalMins < META_MINS && metaYaAlcanzada) {
+        metaYaAlcanzada=false; clearTimeout(goalSwapTimer);
+        totalEl.classList.remove('goal-reached','total-goal-text');
+        totalEl.innerHTML=minutosAHora(totalMins) + ' hr'; totalEl.style.color=obtenerColorProgreso(totalMins);
+    } else if (totalMins < META_MINS) {
+        totalEl.innerHTML=minutosAHora(totalMins) + ' hr'; totalEl.style.color=obtenerColorProgreso(totalMins);
+    }
+    const pct=Math.min(totalMins/META_MINS*100,100);
+    const fill=document.getElementById('progressFill');
+    fill.style.width=pct+'%'; fill.style.background=obtenerColorProgreso(totalMins);
+    document.getElementById('progressPct').textContent=Math.round(pct)+'%';
+    if (totalMins>=META_MINS && !metaYaAlcanzada) {
+        metaYaAlcanzada=true;
+        totalEl.innerHTML=minutosAHora(totalMins) + ' hr'; totalEl.style.color=obtenerColorProgreso(totalMins);
+        totalEl.classList.remove('goal-reached'); void totalEl.offsetWidth; totalEl.classList.add('goal-reached');
+        lanzarBurst(totalEl,['🎊','🎉','⭐','🌟','✨','🏆'],10);
+        clearTimeout(goalSwapTimer);
+        goalSwapTimer=setTimeout(()=>{
+            totalEl.classList.remove('goal-reached'); totalEl.classList.add('total-goal-text');
+            totalEl.style.color=obtenerColorProgreso(META_MINS);
+            totalEl.innerHTML='🏆💯🎉<br><span style="font-size:13px;font-weight:500;color:#5F6368;">"Bien hecho, esclavo bueno y fiel"<br><em style="font-size:11px">Mateo 25:23</em></span>';
+        },2200);
+    }
+    actualizarContadorCursos();
+}
+
+function alCambiar(dia, valor) {
+    datos[`dia_${dia}`]=valor; localStorage.setItem(KEY_CUR,JSON.stringify(datos)); actualizarUI();
+}
+const winkTimers={};
+function alSalir(dia, valor) {
+    const mins=parsearMinutos(valor);
+    if (mins>=120 && !winkTimers[dia]) celebrarDia(dia);
+}
+function celebrarDia(dia) {
+    const input=document.getElementById(`dia_${dia}`); if (!input) return;
+    lanzarBurst(input,['⭐','🚀','🔥','✨','💫'],8);
+    if (winkTimers[dia]) return;
+    const savedVal=input.value; const wink=document.createElement('span');
+    wink.className='wink-face'; wink.textContent='😉'; input.replaceWith(wink);
+    winkTimers[dia]=setTimeout(()=>{
+        const inp=document.createElement('input'); inp.type='text'; inp.id=`dia_${dia}`;
+        inp.value=savedVal; inp.placeholder='0:00'; inp.autocomplete='off';
+        inp.setAttribute('oninput',`alCambiar(${dia},this.value)`);
+        inp.setAttribute('onblur',`alSalir(${dia},this.value)`);
+        wink.replaceWith(inp); delete winkTimers[dia];
+    },2200);
+}
+
+// ─── CONTADOR DE CURSOS EN INICIO ────────────────────────────────────────────
+function actualizarContadorCursos() {
+    const total = cursos.length;
+    document.getElementById('coursesInlineCount').textContent = total;
+    const lbl = document.getElementById('coursesInlineBlock').querySelector('.courses-inline-label');
+    lbl.textContent = total === 1 ? 'curso bíblico activo' : 'cursos bíblicos activos';
+}
+
+// ─── WHATSAPP ─────────────────────────────────────────────────────────────────
+function pedirNumero(motivo) {
+    const num=prompt(motivo||'📱 ¿A qué número de WhatsApp vas a enviar el informe?\n(Incluye código de país, ej: 573001234567)', WA_NUMBER||SUPERVISOR);
+    if (num===null) return false;
+    const limpio=num.replace(/\D/g,'');
+    if (!limpio){ alert('Número no válido, inténtalo de nuevo.'); return false; }
+    WA_NUMBER=limpio; SUPERVISOR=limpio;
+    localStorage.setItem(KEY_WA,limpio); localStorage.setItem(KEY_SUPERVISOR,limpio);
+    return true;
+}
+function enviarWhatsApp() {
+    if (!NOMBRE){ editarNombre(); if (!NOMBRE) return; }
+    let totalMins=0;
+    for (let d=1;d<=diasMes;d++) totalMins+=parsearMinutos(datos[`dia_${d}`]||'');
+    if (totalMins===0){ alert('No tienes horas registradas para enviar este mes.'); return; }
+    if (!WA_NUMBER){ if (!pedirNumero()) return; }
+    const totalTexto = minutosAHora(totalMins);
+    const msg=`*INFORME DE PREDICACIÓN*\n\n*Nombre*: ${NOMBRE}\n*Mes*: ${mesNombre} ${year}\n\n*Horas*: ${totalTexto}\n*Cursos bíblicos*: ${cursos.length}\n\n_Feliz de servir a Jehová_ 🙏`;
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+document.getElementById('btnWA').addEventListener('contextmenu',e=>{e.preventDefault();pedirNumero(`✏️ Número actual: ${WA_NUMBER||'ninguno'}\n¿Quieres cambiarlo?`);});
+let waLP;
+document.getElementById('btnWA').addEventListener('touchstart',()=>{waLP=setTimeout(()=>{pedirNumero(`✏️ Número actual: ${WA_NUMBER||'ninguno'}\n¿Quieres cambiarlo?`);},600);});
+document.getElementById('btnWA').addEventListener('touchend',()=>clearTimeout(waLP));
+document.getElementById('btnWA').addEventListener('touchmove',()=>clearTimeout(waLP));
+
+// ─── EMOJI BURST ──────────────────────────────────────────────────────────────
+function lanzarBurst(originEl, emojis, count) {
+    const rect=originEl.getBoundingClientRect();
+    const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+    for (let i=0;i<count;i++) {
+        const el=document.createElement('span'); el.className='emoji-burst';
+        el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+        const angle=(Math.random()*360)*Math.PI/180, dist=50+Math.random()*70;
+        el.style.setProperty('--tx',`${Math.cos(angle)*dist}px`);
+        el.style.setProperty('--ty',`${Math.sin(angle)*dist}px`);
+        el.style.left=`${cx}px`; el.style.top=`${cy}px`;
+        el.style.animationDelay=`${i*28}ms`;
+        document.body.appendChild(el); el.addEventListener('animationend',()=>el.remove());
+    }
+}
+
+// ─── CURSOS BÍBLICOS ─────────────────────────────────────────────────────────
+function abrirModalCurso(id) {
+    const modal = document.getElementById('courseModal');
+    document.getElementById('courseEditId').value = id || '';
+    document.getElementById('courseModalTitle').textContent = id ? 'Editar curso bíblico' : 'Agregar curso bíblico';
+    if (id !== undefined) {
+        const c = cursos.find(x=>x.id===id);
+        if (c) {
+            document.getElementById('courseNameInput').value  = c.nombre;
+            document.getElementById('courseFreqInput').value  = c.frecuencia||'';
+            document.getElementById('courseDirInput').value   = c.direccion||'';
+            document.getElementById('courseNotasInput').value = c.notas||'';
+        }
+    } else {
+        document.getElementById('courseNameInput').value  = '';
+        document.getElementById('courseFreqInput').value  = '';
+        document.getElementById('courseDirInput').value   = '';
+        document.getElementById('courseNotasInput').value = '';
+    }
+    modal.classList.add('open');
+}
+
+function cerrarModalCurso(e) {
+    if (e.target === document.getElementById('courseModal')) {
+        document.getElementById('courseModal').classList.remove('open');
+    }
+}
+
+function guardarCurso(nombrePreset) {
+    const nombre = nombrePreset || document.getElementById('courseNameInput').value.trim();
+    if (!nombre) { alert('Por favor ingresa el nombre del estudiante'); return; }
+    const id     = document.getElementById('courseEditId').value;
+    const freq   = document.getElementById('courseFreqInput').value.trim();
+    const dir    = document.getElementById('courseDirInput').value.trim();
+    const notas  = document.getElementById('courseNotasInput').value.trim();
+
+    if (id) {
+        const idx = cursos.findIndex(c=>c.id===id);
+        if (idx!==-1) { cursos[idx] = { ...cursos[idx], nombre, frecuencia:freq, direccion:dir, notas }; }
+    } else {
+        cursos.push({ id: Date.now().toString(), nombre, frecuencia:freq, direccion:dir, notas, creado: new Date().toISOString() });
+    }
+    localStorage.setItem(KEY_CURSOS, JSON.stringify(cursos));
+    document.getElementById('courseModal').classList.remove('open');
+    renderCursos();
+    actualizarContadorCursos();
+}
+
+function eliminarCurso(id) {
+    if (!confirm('¿Eliminar este curso bíblico?')) return;
+    cursos = cursos.filter(c=>c.id!==id);
+    localStorage.setItem(KEY_CURSOS, JSON.stringify(cursos));
+    renderCursos();
+    actualizarContadorCursos();
+}
+
+function renderCursos() {
+    const list = document.getElementById('cursosList');
+    const badge= document.getElementById('cursosCountBadge');
+    badge.textContent = `${cursos.length} estudiante${cursos.length!==1?'s':''}`;
+
+    if (cursos.length===0) {
+        list.innerHTML=`<div class="empty-state"><div class="empty-icon">📖</div><h3>Sin cursos bíblicos</h3><p>Agrega a tus estudiantes de la Biblia para llevar un seguimiento.</p></div>`;
+        return;
+    }
+    list.innerHTML = cursos.map(c=>`
+        <div class="course-item">
+            <div class="course-avatar">${c.nombre.charAt(0).toUpperCase()}</div>
+            <div class="course-info">
+                <div class="course-name">${c.nombre}</div>
+                <div class="course-detail">${c.frecuencia||'Sin frecuencia definida'}${c.direccion?' · '+c.direccion:''}</div>
+                ${c.notas?`<div class="course-detail" style="font-style:italic;margin-top:2px;">${c.notas}</div>`:''}
+            </div>
+            <div class="course-actions">
+                <button class="btn-icon" onclick="abrirModalCurso('${c.id}')" title="Editar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon delete" onclick="eliminarCurso('${c.id}')" title="Eliminar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ─── REVISTAS ─────────────────────────────────────────────────────────────────
+function abrirModalRevista(id) {
+    const modal = document.getElementById('revistaModal');
+    document.getElementById('revistaEditId').value = id || '';
+    document.getElementById('revistaModalTitle').textContent = id ? 'Editar revisita' : 'Agregar revisita';
+    
+    if (id !== undefined) {
+        const r = revistas.find(x => x.id === id);
+        if (r) {
+            document.getElementById('revistaTituloInput').value  = r.titulo || '';
+            document.getElementById('revistaDiaInput').value     = r.dia || '';
+            document.getElementById('revistaDestinoInput').value = r.destino || '';
+            document.getElementById('revistaNotasInput').value   = r.notas || '';
+        }
+    } else {
+        document.getElementById('revistaTituloInput').value  = '';
+        document.getElementById('revistaDiaInput').value     = '';
+        document.getElementById('revistaDestinoInput').value = '';
+        document.getElementById('revistaNotasInput').value   = '';
+    }
+    modal.classList.add('open');
+}
+function cerrarModalRevista(e) {
+    if (e.target===document.getElementById('revistaModal')) document.getElementById('revistaModal').classList.remove('open');
+}
+let activeRevisitaId = null;
+
+function guardarRevista() {
+    const titulo  = document.getElementById('revistaTituloInput').value.trim();
+    const dia     = document.getElementById('revistaDiaInput').value.trim();
+    const destino = document.getElementById('revistaDestinoInput').value.trim();
+    const notas   = document.getElementById('revistaNotasInput').value.trim();
+    if (!titulo) { alert('Por favor ingresa el nombre de la persona'); return; }
+    
+    const id = document.getElementById('revistaEditId').value;
+    if (id) {
+        const idx = revistas.findIndex(r => r.id === id);
+        if (idx !== -1) {
+            revistas[idx] = { ...revistas[idx], titulo, dia, destino, notas };
+        }
+    } else {
+        // Toda revisita nueva se crea con entregada: true (para que aparezca en Revisitas nuevas)
+        revistas.push({ id: Date.now().toString(), titulo, dia, destino, notas, entregada: true });
+    }
+    
+    localStorage.setItem(KEY_REVISTAS, JSON.stringify(revistas));
+    document.getElementById('revistaModal').classList.remove('open');
+    renderRevistas();
+}
+function toggleRevista(id) {
+    const r = revistas.find(x => x.id === id);
+    if (r) {
+        activeRevisitaId = id;
+        document.getElementById('cursoBiblicoModalNombre').textContent = r.titulo;
+        document.getElementById('cursoBiblicoModal').classList.add('open');
+    }
+}
+function respuestaCursoBiblico(acepto) {
+    const modal = document.getElementById('cursoBiblicoModal');
+    if (!activeRevisitaId) {
+        modal.classList.remove('open');
+        return;
+    }
+    
+    const r = revistas.find(x => x.id === activeRevisitaId);
+    if (r) {
+        if (acepto) {
+            // Se va al curso bíblico
+            cursos.push({
+                id: Date.now().toString(),
+                nombre: r.titulo,
+                frecuencia: '',
+                direccion: r.destino || '',
+                notas: r.notas || '',
+                creado: new Date().toISOString()
+            });
+            localStorage.setItem(KEY_CURSOS, JSON.stringify(cursos));
+            
+            // Se elimina de las revisitas
+            revistas = revistas.filter(x => x.id !== activeRevisitaId);
+            localStorage.setItem(KEY_REVISTAS, JSON.stringify(revistas));
+            
+            actualizarContadorCursos();
+        } else {
+            // "No, aún no"
+            // Si estaba en "Revisitas nuevas" (entregada: true), pasa a "Revisitas por revisitar" (entregada: false)
+            if (r.entregada) {
+                r.entregada = false;
+                localStorage.setItem(KEY_REVISTAS, JSON.stringify(revistas));
+            }
+            // Si ya estaba en "Revisitas por revisitar" (entregada: false), se queda ahí (sin cambiar nada)
+        }
+    }
+    
+    activeRevisitaId = null;
+    modal.classList.remove('open');
+    renderRevistas();
+}
+function eliminarRevista(id) {
+    if (!confirm('¿Eliminar esta revisita?')) return;
+    revistas=revistas.filter(x=>x.id!==id);
+    localStorage.setItem(KEY_REVISTAS,JSON.stringify(revistas));
+    renderRevistas();
+}
+function renderRevistas() {
+    const listNuevas = document.getElementById('revistasNuevasList');
+    const listRevisitar = document.getElementById('revistasRevisitarList');
+    const badgeNuevas = document.getElementById('revistasNuevasBadge');
+    const badgeRevisitar = document.getElementById('revistasRevisitarBadge');
+
+    const nuevas = revistas.filter(r => r.entregada);
+    const porRevisitar = revistas.filter(r => !r.entregada);
+
+    badgeNuevas.innerHTML = nuevas.length > 0 ? `<span class="pending-count" style="background:var(--jw-blue);">${nuevas.length}</span>` : '';
+    badgeRevisitar.innerHTML = porRevisitar.length > 0 ? `<span class="pending-count" style="background:#D97706;">${porRevisitar.length}</span>` : '';
+
+    // Render Nuevas list
+    if (nuevas.length === 0) {
+        listNuevas.innerHTML = `<div class="empty-state"><div class="empty-icon">🤝</div><h3>Ninguna visitada</h3><p>Las revisitas que completes este mes aparecerán aquí.</p></div>`;
+    } else {
+        listNuevas.innerHTML = nuevas.map(r => renderItemRevista(r)).join('');
+    }
+
+    // Render Por Revisitar list
+    if (porRevisitar.length === 0) {
+        listRevisitar.innerHTML = `<div class="empty-state"><div class="empty-icon">🗓️</div><h3>Al día</h3><p>No tienes visitas pendientes. ¡Excelente trabajo!</p></div>`;
+    } else {
+        listRevisitar.innerHTML = porRevisitar.map(r => renderItemRevista(r)).join('');
+    }
+}
+function renderItemRevista(r) {
+    return `
+        <div class="revista-item">
+            <div class="revista-cover" style="background:${r.entregada ? 'var(--jw-blue-light)' : '#D97706'}">👤</div>
+            <div class="revista-info">
+                <div class="revista-title">${r.titulo}</div>
+                <div class="revista-detail">${r.dia ? 'Día ' + r.dia + ' · ' : ''}${r.destino || 'Sin dirección'}</div>
+                ${r.notas ? `<div class="revista-detail" style="font-style:italic;margin-top:2px;color:var(--muted);">${r.notas}</div>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label class="checkbox-wrap" style="margin-right:4px;">
+                    <input type="checkbox" onchange="toggleRevista('${r.id}')">
+                    <div class="checkbox-custom"></div>
+                </label>
+                <button class="btn-icon" onclick="abrirModalRevista('${r.id}')" title="Editar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-icon delete" onclick="eliminarRevista('${r.id}')" title="Eliminar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ─── RESUMEN ─────────────────────────────────────────────────────────────────
+let selectedResumenMonth = month;
+let selectedResumenYear  = year;
+
+function renderResumen() {
+    renderMonthTabs();
+    renderResumenStats(selectedResumenYear, selectedResumenMonth);
+    renderBarChart();
+    renderDonut(selectedResumenYear, selectedResumenMonth);
+}
+
+function renderMonthTabs() {
+    const tabs = document.getElementById('monthTabs');
+    tabs.innerHTML = '';
+    // Mostrar últimos 6 meses + mes actual
+    for (let i = 5; i >= 0; i--) {
+        let m = month - i; let y = year;
+        if (m < 0) { m += 12; y -= 1; }
+        const key = `${meses[m].substring(0,3)} ${y}`;
+        const tab = document.createElement('button');
+        tab.className = 'month-tab' + (m===selectedResumenMonth && y===selectedResumenYear?' active':'');
+        tab.textContent = key;
+        tab.onclick = () => {
+            selectedResumenMonth = m; selectedResumenYear = y;
+            document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
+            tab.classList.add('active');
+            renderResumenStats(y, m);
+            renderDonut(y, m);
+        };
+        tabs.appendChild(tab);
+    }
+}
+
+function renderResumenStats(y, m) {
+    const key   = `servicio_${y}_${m}`;
+    const data  = JSON.parse(localStorage.getItem(key)) || {};
+    const dias  = new Date(y, m+1, 0).getDate();
+    const total = calcularTotalMinutos(data, dias);
+    const metaH = META_HORAS * 60;
+    const pct   = Math.min(Math.round(total / metaH * 100), 999);
+    const diasCon= Object.values(data).filter(v=>parsearMinutos(v)>0).length;
+    const promedio= diasCon>0 ? Math.round(total/diasCon) : 0;
+
+    document.getElementById('resumenMesTitle').textContent = `${meses[m]} ${y}`;
+    document.getElementById('resumenStatGrid').innerHTML = `
+        <div class="stat-box"><div class="val">${minutosAHora(total)}</div><div class="lbl">Total horas</div></div>
+        <div class="stat-box"><div class="val">${pct}%</div><div class="lbl">De la meta</div></div>
+        <div class="stat-box"><div class="val">${diasCon}</div><div class="lbl">Días predicados</div></div>
+        <div class="stat-box"><div class="val">${minutosAHora(promedio)}</div><div class="lbl">Promedio/día</div></div>
+    `;
+}
+
+function renderBarChart() {
+    const chart = document.getElementById('barChart');
+    chart.innerHTML = '';
+    let maxH = 0;
+    const monthData = [];
+    for (let i=11; i>=0; i--) {
+        let m=month-i; let y=year;
+        if (m<0){m+=12;y-=1;}
+        const key=`servicio_${y}_${m}`;
+        const data=JSON.parse(localStorage.getItem(key))||{};
+        const dias=new Date(y,m+1,0).getDate();
+        const mins=calcularTotalMinutos(data,dias);
+        const hrs=mins/60;
+        if (hrs>maxH) maxH=hrs;
+        monthData.push({m,y,hrs,mins});
+    }
+    if (maxH===0) maxH=META_HORAS;
+    const maxBar = Math.max(maxH, META_HORAS) * 1.1;
+
+    monthData.forEach(d => {
+        const pct = Math.min(d.hrs/maxBar*100,100);
+        const isGoal = d.hrs >= META_HORAS;
+        const isOver = d.hrs >= META_HORAS*1.1;
+        const col = document.createElement('div');
+        col.className='bar-col';
+        const fillClass = isOver?'bar-fill over':isGoal?'bar-fill goal':'bar-fill';
+        col.innerHTML=`
+            <div class="bar-val">${d.hrs>0?d.hrs.toFixed(0):''}</div>
+            <div class="${fillClass}" style="height:${Math.max(pct,2)}%;"></div>
+            <div class="bar-label">${meses[d.m].substring(0,3)}</div>
+        `;
+        chart.appendChild(col);
+    });
+}
+
+function renderDonut(y, m) {
+    const key  = `servicio_${y}_${m}`;
+    const data = JSON.parse(localStorage.getItem(key)) || {};
+    const dias = new Date(y,m+1,0).getDate();
+    let semana=0, finde=0;
+    for (let d=1;d<=dias;d++) {
+        const dow=new Date(y,m,d).getDay();
+        const mins=parsearMinutos(data[`dia_${d}`]||'');
+        if (dow===0||dow===6) finde+=mins; else semana+=mins;
+    }
+    const total=semana+finde;
+    const canvas=document.getElementById('donutCanvas');
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,100,100);
+    if (total===0) {
+        ctx.strokeStyle='#E5E7EB'; ctx.lineWidth=14;
+        ctx.beginPath(); ctx.arc(50,50,36,0,Math.PI*2); ctx.stroke();
+    } else {
+        const semPct=semana/total, findPct=finde/total;
+        const colors=['#239C43','#2EB854'];
+        [[semPct,colors[0]],[findPct,colors[1]]].reduce((start,[pct,color])=>{
+            const end=start+pct*Math.PI*2;
+            ctx.strokeStyle=color; ctx.lineWidth=14;
+            ctx.beginPath(); ctx.arc(50,50,36,start-Math.PI/2,end-Math.PI/2); ctx.stroke();
+            return end;
+        },0);
+    }
+    document.getElementById('donutLegend').innerHTML=`
+        <div class="legend-item"><div class="legend-dot" style="background:#239C43"></div>Días de semana: <strong>${minutosAHora(semana)}</strong></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2EB854"></div>Fin de semana: <strong>${minutosAHora(finde)}</strong></div>
+        <div class="legend-item" style="margin-top:4px;color:var(--muted);">Total: ${minutosAHora(total)}</div>
+    `;
+}
+
+// ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
+function actualizarConfigView() {
+    document.getElementById('cfgNombre').textContent = NOMBRE || '—';
+    document.getElementById('cfgTipo').textContent   = PRECURSOR_CONFIG[TIPO_PRECURSOR]?.nombre+` (${META_HORAS}h/mes)` || '—';
+    document.getElementById('cfgWA').textContent     = WA_NUMBER ? `+${WA_NUMBER}` : '—';
+}
+function editarNombreConfig() {
+    const n=prompt('¿Cuál es tu nombre?', NOMBRE);
+    if (n!==null && n.trim()!=='') {
+        NOMBRE=n.trim(); localStorage.setItem(KEY_NOMBRE,NOMBRE);
+        actualizarHeaderNombre(); actualizarConfigView();
+    }
+}
+function editarTipoConfig() {
+    const opciones=['auxiliar (30 h/mes)','regular (50 h/mes)'];
+    const idx=TIPO_PRECURSOR==='auxiliar'?0:1;
+    const r=prompt(`Tipo de precursor actual: ${opciones[idx]}\n\nEscribe:\n1 → Auxiliar (30 h/mes)\n2 → Regular (50 h/mes)`,'');
+    if (r==='1'){ TIPO_PRECURSOR='auxiliar'; } else if (r==='2'){ TIPO_PRECURSOR='regular'; } else return;
+    META_HORAS=PRECURSOR_CONFIG[TIPO_PRECURSOR].horas; META_MINS=META_HORAS*60;
+    localStorage.setItem(KEY_TIPO_PRECURSOR,TIPO_PRECURSOR);
+    document.getElementById('metaLabel').textContent=`Meta: ${META_HORAS} hr`;
+    actualizarConfigView(); actualizarUI();
+}
+function editarWAConfig() {
+    if (pedirNumero('✏️ Número actual: '+WA_NUMBER+'\n\nIngresa el nuevo número de WhatsApp (con código de país):')) {
+        actualizarConfigView();
+    }
+}
+function verTutorial() {
+    navigateTo('inicio');
+    localStorage.removeItem(KEY_TUTORIAL_SEEN);
+    setTimeout(()=>iniciarTutorial(),400);
+}
+function borrarMesActual() {
+    if (confirm(`¿Seguro que quieres borrar todos los datos de ${mesNombre} ${year}?`)) {
+        localStorage.removeItem(KEY_CUR); location.reload();
+    }
+}
+function restablecerTodo() {
+    if (confirm('⚠️ ¿Seguro? Esto borrará TODO: horas, cursos, revistas y configuración.')) {
+        if (confirm('Esta acción NO se puede deshacer. ¿Continuar?')) {
+            localStorage.clear(); window.location.href = 'landing.html';
+        }
+    }
+}
+
+// ─── TUTORIAL ────────────────────────────────────────────────────────────────
+const tutorialSteps=[
+    { target:'.header',        title:'📅 Encabezado', text:'Aquí ves el mes actual y tu nombre. Tócalo para editar.' },
+    { target:'.days-wrapper',  title:'📝 Horas diarias', text:'Escribe tus horas de predicación: "2", "1.5" o "2:30".' },
+    { target:'.progress-bar-wrap', title:'📊 Progreso', text:`La barra te muestra qué tan cerca estás de tu meta de ${META_HORAS} horas.` },
+    { target:'#btnWA',         title:'📱 Enviar informe', text:'Envía tu informe mensual por WhatsApp con un solo toque.' },
+    { target:'#nav-resumen',   title:'📊 Resumen', text:'Consulta tus estadísticas de meses anteriores y del año.' },
+    { target:'#nav-cursos',    title:'📖 Cursos bíblicos', text:'Lleva el seguimiento de tus estudiantes de la Biblia.' },
+];
+let currentTutorialStep=0, tutorialActive=false, spotlightCurrentTarget=null;
+
+function iniciarTutorial() {
+    if (tutorialActive) return;
+    tutorialActive=true; currentTutorialStep=0; mostrarTutorialStep(0);
+}
+function mostrarTutorialStep(step) {
+    if (step>=tutorialSteps.length){ terminarTutorial(); return; }
+    const s=tutorialSteps[step]; const el=document.querySelector(s.target);
+    if (!el){ avanzarTutorial(); return; }
+    if (s.target==='#btnWA') { window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); setTimeout(()=>ejecutarPos(step,s,el),500); }
+    else { ejecutarPos(step,s,el); }
+}
+function ejecutarPos(step,s,el) {
+    const overlay=document.getElementById('spotlightOverlay');
+    const hl=document.getElementById('spotlightHighlight');
+    const tt=document.getElementById('spotlightTooltip');
+    if (spotlightCurrentTarget){ try{spotlightCurrentTarget.classList.remove('spotlight-target');}catch(e){} spotlightCurrentTarget=null; }
+    const rect=el.getBoundingClientRect(); const pad=8;
+    const hx=Math.max(0,rect.left-pad), hy=Math.max(0,rect.top-pad);
+    const hw=rect.width+pad*2, hh=rect.height+pad*2;
+    hl.style.left=hx+'px'; hl.style.top=hy+'px'; hl.style.width=hw+'px'; hl.style.height=hh+'px';
+    try{el.classList.add('spotlight-target'); spotlightCurrentTarget=el;}catch(e){}
+    try{const hole=document.getElementById('spotHole');if(hole){hole.setAttribute('x',hx);hole.setAttribute('y',hy);hole.setAttribute('width',hw);hole.setAttribute('height',hh);hole.setAttribute('rx',12);}}catch(e){}
+    document.getElementById('tooltipTitle').textContent=s.title;
+    document.getElementById('tooltipText').textContent=s.text;
+    const vw=window.innerWidth,vh=window.innerHeight,margin=16,gap=14;
+    const tw=Math.min(320,vw-margin*2); const th=tt.offsetHeight||160;
+    let tl=rect.left+rect.width/2-tw/2; tl=Math.max(margin,Math.min(tl,vw-tw-margin));
+    let topV; let below=true;
+    if (rect.bottom+gap+th+margin<=vh){topV=rect.bottom+gap;}
+    else if (rect.top-gap-th-margin>=0){topV=rect.top-gap-th;below=false;}
+    else{topV=Math.max(margin,(vh-th)/2);}
+    tt.style.top=topV+'px'; tt.style.left=tl+'px'; tt.style.width=tw+'px';
+    tt.style.borderTop=below?'4px solid var(--jw-blue)':'none';
+    tt.style.borderBottom=below?'none':'4px solid var(--jw-blue)';
+    overlay.classList.add('active'); setTimeout(()=>tt.classList.add('active'),100);
+    currentTutorialStep=step;
+}
+function avanzarTutorial() {
+    const tt=document.getElementById('spotlightTooltip'); tt.classList.remove('active');
+    setTimeout(()=>mostrarTutorialStep(currentTutorialStep+1),200);
+}
+function saltarTutorial(){ terminarTutorial(); }
+function terminarTutorial() {
+    const overlay=document.getElementById('spotlightOverlay');
+    const tt=document.getElementById('spotlightTooltip'); tt.classList.remove('active');
+    setTimeout(()=>overlay.classList.remove('active'),200);
+    if (spotlightCurrentTarget){ try{spotlightCurrentTarget.classList.remove('spotlight-target');}catch(e){} spotlightCurrentTarget=null; }
+    try{const hole=document.getElementById('spotHole');if(hole){hole.setAttribute('width',0);hole.setAttribute('height',0);}}catch(e){}
+    tutorialActive=false; localStorage.setItem(KEY_TUTORIAL_SEEN,'1');
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+if (verificarLogin()) {
+    actualizarHeaderNombre();
+    actualizarUI();
+    actualizarContadorCursos();
+    document.getElementById('metaLabel').textContent=`Meta: ${META_HORAS} hr`;
+    if (!localStorage.getItem(KEY_TUTORIAL_SEEN)) setTimeout(()=>iniciarTutorial(),1000);
+}
+</script>
+
+</body>
+</html>
