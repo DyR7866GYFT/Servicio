@@ -311,9 +311,10 @@
         }
 
         .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
+            flex-wrap: wrap;
             gap: 32px;
+            justify-content: center;
         }
 
         .feature-card {
@@ -325,6 +326,8 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            flex: 1 1 300px;
+            max-width: 340px;
         }
 
         .feature-card:hover {
@@ -690,11 +693,6 @@
                 justify-content: center;
             }
 
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 24px;
-            }
-
             .detail-row {
                 grid-template-columns: 1fr;
                 gap: 40px;
@@ -729,6 +727,11 @@
         }
 
         @media (max-width: 768px) {
+            .hero { padding: 48px 0 64px; }
+            .features { padding: 64px 0; }
+            .details { padding: 64px 0; }
+            .cta-bottom { padding: 64px 0; }
+            
             .nav-links {
                 display: none;
             }
@@ -738,11 +741,11 @@
             }
 
             .hero-title {
-                font-size: 36px;
+                font-size: 32px;
             }
 
             .hero-desc {
-                font-size: 16px;
+                font-size: 15px;
             }
 
             .cta-card {
@@ -750,13 +753,28 @@
             }
 
             .cta-card h2 {
-                font-size: 28px;
+                font-size: 26px;
             }
 
             .footer-grid {
                 flex-direction: column;
                 gap: 20px;
                 text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-actions {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+            }
+            .hero-actions .btn {
+                width: 100%;
+            }
+            .feature-card {
+                max-width: 100%;
+                padding: 24px 20px;
             }
         }
     </style>
@@ -854,6 +872,18 @@
                 </div>
                 <!-- Feature 3 -->
                 <div class="feature-card">
+                    <div class="feature-icon">📖</div>
+                    <h3 class="feature-name">Cursos Bíblicos</h3>
+                    <p class="feature-text">Lleva un seguimiento de tus estudiantes: organiza sus días/frecuencia, direcciones de contacto y notas detalladas sobre su progreso.</p>
+                </div>
+                <!-- Feature 4 -->
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3 class="feature-name">Control de Revisitas</h3>
+                    <p class="feature-text">Registra tus visitas de manera estructurada. Puedes convertirlas en un curso bíblico de forma directa en cuanto acepten estudiar.</p>
+                </div>
+                <!-- Feature 5 -->
+                <div class="feature-card">
                     <div class="feature-icon">📱</div>
                     <h3 class="feature-name">WhatsApp en un Clic</h3>
                     <p class="feature-text">Genera un mensaje redactado con tu informe de predicación mensual y envíalo
@@ -899,6 +929,41 @@
                 </div>
                 <div class="detail-image-wrap">
                     <img src="feature_reports.png" alt="Ilustración de envío de informes por WhatsApp"
+                        class="detail-image">
+                </div>
+            </div>
+
+            <!-- Row 2: Cursos & Revisitas Detail -->
+            <div class="detail-row reverse" style="margin-top: 80px;">
+                <div class="detail-content">
+                    <h2 class="detail-title">Gestiona tus cursos bíblicos y revisitas en un solo lugar</h2>
+                    <p class="detail-text">Mantén un registro detallado de tus estudiantes y contactos interesados. Organiza tu ruta de visitas pendientes y convierte una visita en curso de manera interactiva cuando acepten estudiar.</p>
+                    <ul class="detail-list">
+                        <li class="detail-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Día, dirección y notas detalladas por estudiante.
+                        </li>
+                        <li class="detail-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Listas separadas para visitas nuevas y por revisitar.
+                        </li>
+                        <li class="detail-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Conversión directa de revisita a curso bíblico.
+                        </li>
+                    </ul>
+                </div>
+                <div class="detail-image-wrap">
+                    <img src="privacy_illustration.png" alt="Ilustración de cursos y revisitas"
                         class="detail-image">
                 </div>
             </div>
